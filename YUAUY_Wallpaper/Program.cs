@@ -10,19 +10,17 @@ namespace YUAUY_Wallpaper
         static void Main()
         {
             IntPtr WorkerWHwnd = GetWorkerWHwnd();
-            BufferedGraphics buffer = CreateBufferedGraphicsFromHwnd(WorkerWHwnd);
+            BufferedGraphics buffer = CreateBufferedGraphicsFromHwnd(WorkerWHwnd,true);
             RectangleF rectangle = buffer.Graphics.VisibleClipBounds;
-            var brush = new SolidBrush(Color.Transparent);
+            var brush = new SolidBrush(Color.FromArgb(0, 0, 0, 0));
 
-            buffer.Graphics.FillRectangle(Brushes.Blue, -100, -100, 200, 200);
             for (int i = 0; i < 255; i++)
             {
-
                 brush.Color = Color.FromArgb(i, 0, 0, 0);
                 buffer.Graphics.FillRectangle(brush, rectangle);
                 buffer.Render();
-                Task.Delay(0).Wait();
             }
+
             //ApplicationConfiguration.Initialize();
             //Application.Run(new Form1());
         }
