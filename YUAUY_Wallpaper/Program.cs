@@ -4,10 +4,6 @@ namespace YUAUY_Wallpaper
 {
     internal static class Program
     {
-        /// <summary>
-        ///  The main entry point for the application.
-        /// </summary>
-        [STAThread]
         static void Main()
         {
             IntPtr WorkerWHandel = IntPtr.Zero;
