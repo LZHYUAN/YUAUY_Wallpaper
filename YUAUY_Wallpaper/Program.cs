@@ -10,22 +10,9 @@ namespace YUAUY_Wallpaper
         static void Main()
         {
             IntPtr WorkerWHwnd = GetWorkerWHwnd();
-
-            BufferedGraphics buffer;
-            Rectangle rectangle;
-            var brush = new SolidBrush(Color.FromArgb(0, 0, 0, 0));
-            #region Create Buffered Graphics
-            var WorkerWGraphics = Graphics.FromHwnd(WorkerWHwnd);
-
-            rectangle = new Rectangle(0, 0, (int)WorkerWGraphics.VisibleClipBounds.Width, (int)WorkerWGraphics.VisibleClipBounds.Height);
-
-            buffer = BufferedGraphicsManager.Current.Allocate(WorkerWGraphics, rectangle);
-
-            var bufferHdc = buffer.Graphics.GetHdc();
-            bool success = User32.PrintWindow(WorkerWHwnd, bufferHdc, 0);
-            buffer.Graphics.ReleaseHdc(bufferHdc);
-            #endregion
-
+            BufferedGraphics buffer = CreateBufferedGraphicsFromHwnd(WorkerWHwnd);
+            RectangleF rectangle = buffer.Graphics.VisibleClipBounds;
+            var brush = new SolidBrush(Color.Transparent);
 
             buffer.Graphics.FillRectangle(Brushes.Blue, -100, -100, 200, 200);
             for (int i = 0; i < 255; i++)
@@ -36,14 +23,7 @@ namespace YUAUY_Wallpaper
                 buffer.Render();
                 Task.Delay(0).Wait();
             }
-
-            var scr = Screen.AllScreens;
-
-
-
-
             //ApplicationConfiguration.Initialize();
-
             //Application.Run(new Form1());
         }
         static IntPtr GetWorkerWHwnd()
@@ -64,11 +44,11 @@ namespace YUAUY_Wallpaper
         }
         static BufferedGraphics CreateBufferedGraphicsFromHwnd(IntPtr Hwnd, bool printWindow = false)
         {
-            var Graphics = System.Drawing.Graphics.FromHwnd(Hwnd);
+            var graphics = System.Drawing.Graphics.FromHwnd(Hwnd);
 
-            Rectangle rectangle = new Rectangle(0, 0, (int)Graphics.VisibleClipBounds.Width, (int)Graphics.VisibleClipBounds.Height);
+            Rectangle rectangle = new Rectangle(0, 0, (int)graphics.VisibleClipBounds.Width, (int)graphics.VisibleClipBounds.Height);
 
-            BufferedGraphics buffer = BufferedGraphicsManager.Current.Allocate(Graphics, rectangle);
+            BufferedGraphics buffer = BufferedGraphicsManager.Current.Allocate(graphics, rectangle);
 
             if (printWindow) // 繪製原有的畫面在buffer上
             {
