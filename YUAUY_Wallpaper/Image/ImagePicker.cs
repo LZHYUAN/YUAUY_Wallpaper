@@ -49,14 +49,14 @@ namespace YUAUY_Wallpaper.Image
         public Bitmap? Next()
         {
             _index++;
-            if (_index > _imagePaths.Length) _index = 0;
+            if (_index >= _imagePaths.Length) _index = 0;
 
             _CheckAllFolder();
             if (_lastFileCount != ImageFolderList.Sum(path => Directory.GetFiles(path).Length) || // tmp file count != now file count, For detection file add and remove
               (_imagePaths.Length > 0 && !File.Exists(_imagePaths[_index]))) // or file not exists, For detection file change
             {
                 _Refresh_imagePaths();
-                if (_index > _imagePaths.Length) _index = 0;
+                if (_index >= _imagePaths.Length) _index = 0;
             }
 
             if (_imagePaths.Length > 0)
