@@ -1,9 +1,11 @@
 using System;
+using System.Diagnostics.Contracts;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.Text;
 using System.Windows.Forms;
+using YUAUY_Wallpaper.Image;
 
 namespace YUAUY_Wallpaper
 {
@@ -12,49 +14,61 @@ namespace YUAUY_Wallpaper
         static string ImagePath = @"D:\YUAN\Pictures\桌布";
         static void Main()
         {
-            IntPtr WorkerWHwnd = GetWorkerWHwnd();
-            BufferedGraphics buffer = CreateBufferedGraphicsFromHwnd(WorkerWHwnd, true);
-            RectangleF rectangle = buffer.Graphics.VisibleClipBounds;
+            var wallGraphics = new HWndGraphics(GetWorkerWHwnd());
 
-            buffer.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+            BufferedGraphicsManager.Current.MaximumBuffer = wallGraphics.Rectangle.Size;
+            var wallBuffer = BufferedGraphicsManager.Current.Allocate(wallGraphics.Graphics, wallGraphics.Rectangle);
+            wallGraphics.PrintWindowToGraphics(wallBuffer.Graphics);
+            wallBuffer.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
 
-            var images = new Queue<string>(Directory.GetFiles(ImagePath).Where(_ =>
-            _.ToUpper().EndsWith(".JPEG") ||
-            _.ToUpper().EndsWith(".JPG") ||
-            _.ToUpper().EndsWith(".PNG")));
+            ImagePicker imagePicker = new ImagePicker()
+            {
+                Sort = ImagePickerSort.Random_NotRepeating
+            };
+            imagePicker.ImageFolderList.Add(ImagePath);
 
-            rectangle.X = (Screen.AllScreens.Min(_ => _.Bounds.X));
-            rectangle.Y = (Screen.AllScreens.Min(_ => _.Bounds.Y));
             Random random = new Random((int)DateTime.Now.Ticks);
+            var brush = new SolidBrush(Color.Transparent);
 
+            for (int i = 1; i < 50; i++)
+            {
+                brush.Color = Color.FromArgb(i, 0, 0, 0);
+                wallBuffer.Graphics.FillRectangle(brush, wallGraphics.Rectangle);
+                wallBuffer.Render();
+            }
+
+            brush.Color = Color.FromArgb(5, 0, 0, 0);
+            int mx = Screen.AllScreens.Min(_ => _.Bounds.X);
+            int my = Screen.AllScreens.Min(_ => _.Bounds.Y);
             while (true)
             {
-                var img = new Bitmap(images.Peek());
+                Task.Delay(1000).Wait();
+
+                var img = imagePicker.Next();
+                if (img == null) continue;
                 var max = Math.Max(img.Width, img.Height);
-                var rs = (double)random.Next(500, 1000) / max;
+                var rs = (double)random.Next(750, 1000) / max;
+                var r = random.Next(-20, 20);
                 if (rs > 1) rs = 1;
                 var bmp = new Bitmap((int)(img.Width * rs) + 20, (int)(img.Height * rs) + 20, PixelFormat.Format32bppArgb);
 
                 var g = Graphics.FromImage(bmp);
                 g.Clear(Color.White);
                 g.DrawImage(img, 10, 10, (int)(img.Width * rs), (int)(img.Height * rs));
+                g.Dispose();
 
-                int s = random.Next(Screen.AllScreens.Length);
-                int w = random.Next(Screen.AllScreens[s].Bounds.Width);
-                int h = random.Next(Screen.AllScreens[s].Bounds.Height);
-                int x = Screen.AllScreens[s].Bounds.X + w;
-                int y = Screen.AllScreens[s].Bounds.Y + h;
+                int i = random.Next(Screen.AllScreens.Length);
+                int x = random.Next(Screen.AllScreens[i].Bounds.Width) + Screen.AllScreens[i].Bounds.X;
+                int y = random.Next(Screen.AllScreens[i].Bounds.Height) + Screen.AllScreens[i].Bounds.Y;
 
-                buffer.Graphics.FillRectangle(new SolidBrush(Color.FromArgb(5, 0, 0, 0)), 0, 0, rectangle.Width, rectangle.Height);
-                var r = random.Next(-20, 20);
-                buffer.Graphics.RotateTransform(r);
-                buffer.Graphics.DrawImage(bmp, x - rectangle.X - bmp.Width / 2, y - rectangle.Y - bmp.Height / 2);
-                buffer.Graphics.RotateTransform(-r);
-                buffer.Render();
+                wallBuffer.Graphics.FillRectangle(brush, wallGraphics.Rectangle);
+                wallBuffer.Graphics.RotateTransform(r);
+                wallBuffer.Graphics.DrawImage(bmp, x - mx - bmp.Width / 2, y - my - bmp.Height / 2);
+                wallBuffer.Graphics.RotateTransform(-r);
+                wallBuffer.Render();
+                img.Dispose();
+                bmp.Dispose();
 
-                images.Enqueue(images.Dequeue());
-
-                Task.Delay(50).Wait();
             }
 
         }
@@ -74,23 +88,5 @@ namespace YUAUY_Wallpaper
 
             return WorkerWHwnd != IntPtr.Zero ? WorkerWHwnd : throw new Exception("Couldn't Find WorkerW");
         }
-        static BufferedGraphics CreateBufferedGraphicsFromHwnd(IntPtr Hwnd, bool printWindow = false)
-        {
-            var graphics = System.Drawing.Graphics.FromHwnd(Hwnd);
-
-            Rectangle rectangle = new Rectangle(0, 0, (int)graphics.VisibleClipBounds.Width, (int)graphics.VisibleClipBounds.Height);
-
-            BufferedGraphics buffer = BufferedGraphicsManager.Current.Allocate(graphics, rectangle);
-
-            if (printWindow) // 繪製原有的畫面在buffer上
-            {
-                var bufferHdc = buffer.Graphics.GetHdc();
-                bool success = User32.PrintWindow(Hwnd, bufferHdc, 0);
-                buffer.Graphics.ReleaseHdc(bufferHdc);
-            }
-
-            return buffer;
-        }
-
     }
 }
