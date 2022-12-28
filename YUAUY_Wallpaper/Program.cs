@@ -37,7 +37,7 @@ namespace YUAUY_Wallpaper
             int my = Screen.AllScreens.Min(_ => _.Bounds.Y);
             while (true)
             {
-                // Task.Delay(1000).Wait();
+                 Task.Delay(1000).Wait();
 
                 var img = imagePicker.Next();
                 if (img == null) continue;
