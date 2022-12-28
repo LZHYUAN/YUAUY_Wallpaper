@@ -25,14 +25,16 @@ namespace YUAUY_Wallpaper
             Graphics.Dispose();
         }
 
-        public void CopyScreenTo(Bitmap bitmap)
+        public Bitmap PrintWindowToBitmap()
         {
+            Bitmap bitmap = new Bitmap(Rectangle.Width,Rectangle.Height);
             using (Graphics graphics = Graphics.FromImage(bitmap))
             {
-                CopyScreenTo(graphics);
+                PrintWindowToGraphics(graphics);
             }
+            return bitmap;
         }
-        public void CopyScreenTo(Graphics graphics)
+        public void PrintWindowToGraphics(Graphics graphics)
         {
             var Hdc = graphics.GetHdc();
             bool success = User32.PrintWindow(Handle, Hdc, 0);
