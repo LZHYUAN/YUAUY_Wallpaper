@@ -25,13 +25,15 @@ namespace YUAUY_Wallpaper.Image
             }
             set
             {
+                if (_sort == value) return;
                 _sort = value;
                 _Refresh_imagePaths();
+
             }
         }
         private ImagePickerSort _sort;
         public int Count { get => _imagePaths.Count(); }
-        public readonly string[] SupportFiles =
+        public string[] SupportFiles { get; } =
             {
                 "JPEG",
                 "JPG",
@@ -94,11 +96,11 @@ namespace YUAUY_Wallpaper.Image
                 case ImagePickerSort.Random:
                     _randomSeed = (int)DateTime.Now.Ticks;
                     Random random = new Random(_randomSeed);
-                    imagePathsTmp = imagePathsTmp.OrderBy(path => random.Next(2));
+                    imagePathsTmp = imagePathsTmp.OrderBy(path => random.Next(imagePathsTmp.Count()));
                     break;
                 case ImagePickerSort.Random_NotRepeating:
                     Random random2 = new Random(_randomSeed);
-                    imagePathsTmp = imagePathsTmp.OrderBy(path => random2.Next(2));
+                    imagePathsTmp = imagePathsTmp.OrderBy(path => random2.Next(imagePathsTmp.Count()));
                     break;
             }
             _imagePaths = imagePathsTmp.ToArray();
