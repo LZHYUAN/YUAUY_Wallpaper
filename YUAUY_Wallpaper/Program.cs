@@ -1,10 +1,5 @@
-using System;
-using System.Diagnostics.Contracts;
-using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
-using System.Text;
-using System.Windows.Forms;
 using YUAUY_Wallpaper.Image;
 
 namespace YUAUY_Wallpaper
@@ -19,7 +14,7 @@ namespace YUAUY_Wallpaper
             BufferedGraphicsManager.Current.MaximumBuffer = wallGraphics.Rectangle.Size;
             var wallBuffer = BufferedGraphicsManager.Current.Allocate(wallGraphics.Graphics, wallGraphics.Rectangle);
             wallGraphics.PrintWindowToGraphics(wallBuffer.Graphics);
-            wallBuffer.Graphics.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
+            wallBuffer.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
 
             ImagePicker imagePicker = new ImagePicker()
             {
@@ -42,7 +37,7 @@ namespace YUAUY_Wallpaper
             int my = Screen.AllScreens.Min(_ => _.Bounds.Y);
             while (true)
             {
-                Task.Delay(1000).Wait();
+                // Task.Delay(1000).Wait();
 
                 var img = imagePicker.Next();
                 if (img == null) continue;

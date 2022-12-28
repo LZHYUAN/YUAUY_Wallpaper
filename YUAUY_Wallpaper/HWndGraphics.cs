@@ -1,12 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Drawing;
-using System.Linq;
-using System.Reflection.Metadata;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace YUAUY_Wallpaper
+﻿namespace YUAUY_Wallpaper
 {
     public class HWndGraphics : IDisposable
     {
@@ -27,7 +19,7 @@ namespace YUAUY_Wallpaper
 
         public Bitmap PrintWindowToBitmap()
         {
-            Bitmap bitmap = new Bitmap(Rectangle.Width,Rectangle.Height);
+            Bitmap bitmap = new Bitmap(Rectangle.Width, Rectangle.Height);
             using (Graphics graphics = Graphics.FromImage(bitmap))
             {
                 PrintWindowToGraphics(graphics);
