@@ -37,32 +37,44 @@ namespace YUAUY_Wallpaper
             int my = Screen.AllScreens.Min(_ => _.Bounds.Y);
             while (true)
             {
-                 Task.Delay(1000).Wait();
+                  Task.Delay(1000).Wait();
 
                 var img = imagePicker.Next();
                 if (img == null) continue;
                 var max = Math.Max(img.Width, img.Height);
                 var rs = (double)random.Next(750, 1000) / max;
-                var r = random.Next(-20, 20);
+                var r = random.Next(-30, 30);
                 if (rs > 1) rs = 1;
-                var bmp = new Bitmap((int)(img.Width * rs) + 20, (int)(img.Height * rs) + 20, PixelFormat.Format32bppArgb);
+                var rbmp = new Bitmap((int)(img.Width * rs) + 20, (int)(img.Height * rs) + 20, PixelFormat.Format32bppArgb);
 
-                var g = Graphics.FromImage(bmp);
+                var g = Graphics.FromImage(rbmp);
                 g.Clear(Color.White);
                 g.DrawImage(img, 10, 10, (int)(img.Width * rs), (int)(img.Height * rs));
                 g.Dispose();
 
-                int i = random.Next(Screen.AllScreens.Length);
-                int x = random.Next(Screen.AllScreens[i].Bounds.Width) + Screen.AllScreens[i].Bounds.X;
-                int y = random.Next(Screen.AllScreens[i].Bounds.Height) + Screen.AllScreens[i].Bounds.Y;
+
+
+                var s = Screen.AllScreens.Select(_ => (double)_.Bounds.Width * _.Bounds.Height).ToArray();
+                s = s.Select(_ => _ / s.Sum()).ToArray();
+                var st = random.NextDouble();
+                int i = 0;
+                foreach (var t in s)
+                {
+                    st -= t;
+                    if (st <= 0) break;
+                    i++;
+                }
+                int x = random.Next(Screen.AllScreens[i].Bounds.Width - 200) + 100 + Screen.AllScreens[i].Bounds.X;
+                int y = random.Next(Screen.AllScreens[i].Bounds.Height - 200) + 100 + Screen.AllScreens[i].Bounds.Y;
 
                 wallBuffer.Graphics.FillRectangle(brush, wallGraphics.Rectangle);
+                wallBuffer.Graphics.TranslateTransform(x - mx - rbmp.Width / 2, y - my - rbmp.Height / 2);
                 wallBuffer.Graphics.RotateTransform(r);
-                wallBuffer.Graphics.DrawImage(bmp, x - mx - bmp.Width / 2, y - my - bmp.Height / 2);
-                wallBuffer.Graphics.RotateTransform(-r);
+                wallBuffer.Graphics.DrawImage(rbmp, 0, 0);
+                wallBuffer.Graphics.ResetTransform();
                 wallBuffer.Render();
                 img.Dispose();
-                bmp.Dispose();
+                rbmp.Dispose();
 
             }
 
