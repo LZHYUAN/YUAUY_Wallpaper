@@ -89,7 +89,7 @@ namespace YUAUY_Wallpaper
                     wallBuffer.Graphics.DrawImage(tmpBmp, 0, 0);
                     brush.Color = Color.FromArgb((int)(tt*2), 0, 0, 0);
                     wallBuffer.Graphics.FillRectangle(brush, wallGraphics.Rectangle);
-                    wallBuffer.Graphics.TranslateTransform((x - nx) - gx * t + gx, (y - ny) - gx * t + gx);
+                    wallBuffer.Graphics.TranslateTransform((x - nx) - gx * t + gx, (y - ny) - gy * t + gy);
                     wallBuffer.Graphics.RotateTransform(r - sr * rt + sr);
                     wallBuffer.Graphics.DrawImage(rbmp, -rbmp.Width / 2, -rbmp.Height / 2);
                     wallBuffer.Graphics.ResetTransform();
