@@ -6,7 +6,7 @@ namespace YUAUY_Wallpaper
 {
     internal static class Program
     {
-        static string ImagePath = @"D:\YUAN\Pictures\орем";
+        static string ImagePath = @"D:\YUAUY\Pictures\Dropbox\орем";
         static void Main()
         {
             var wallGraphics = new HWndGraphics(GetWorkerWHwnd());
@@ -43,14 +43,14 @@ namespace YUAUY_Wallpaper
             int my = Screen.AllScreens.Max(_ => _.Bounds.Bottom);
             while (true)
             {
-                Task.Delay(1000).Wait();
+                Task.Delay(3_000).Wait();
 
                 var img = imagePicker.Next();
                 if (img == null) continue;
                 var max = Math.Max(img.Width, img.Height);
                 var rs = (double)random.Next(750, 1000) / max;
                 var r = random.Next(-20, 20);
-                var sr = (float)random.Next(50, 60)*(random.Next(2)*2-1) + r;
+                var sr = (float)random.Next(50, 60) * (random.Next(2) * 2 - 1) + r;
                 if (rs > 1) rs = 1;
                 var rbmp = new Bitmap((int)(img.Width * rs) + 20, (int)(img.Height * rs) + 20, PixelFormat.Format32bppArgb);
 
@@ -83,11 +83,11 @@ namespace YUAUY_Wallpaper
 
                 for (float tt = 0; tt <= 5; tt += 0.05f)
                 {
-                    float t =(float)Math.Tanh(tt);
-                    float rt =(float)Math.Tanh((tt)/1.1);
+                    float t = (float)Math.Tanh(tt);
+                    float rt = (float)Math.Tanh((tt) / 1.1);
                     //float rt = (float)Math.Sin(tt * Math.PI / 10);
                     wallBuffer.Graphics.DrawImage(tmpBmp, 0, 0);
-                    brush.Color = Color.FromArgb((int)(tt*2), 0, 0, 0);
+                    brush.Color = Color.FromArgb((int)(tt * 2), 0, 0, 0);
                     wallBuffer.Graphics.FillRectangle(brush, wallGraphics.Rectangle);
                     wallBuffer.Graphics.TranslateTransform((x - nx) - gx * t + gx, (y - ny) - gy * t + gy);
                     wallBuffer.Graphics.RotateTransform(r - sr * rt + sr);
@@ -110,19 +110,24 @@ namespace YUAUY_Wallpaper
         }
         static IntPtr GetWorkerWHwnd()
         {
-            IntPtr WorkerWHwnd = IntPtr.Zero;
+            // call progman create WorkerW
+            var progman = User32.FindWindowEx(IntPtr.Zero, IntPtr.Zero, "Progman", null);
+            User32.SendMessage(progman, 0x052C, new IntPtr(0xD), new IntPtr(0x1));
+
+            
+            IntPtr workerWHwnd = IntPtr.Zero;
             User32.EnumWindows((hWnd, lParam) =>
             {
                 IntPtr p = User32.FindWindowEx(hWnd, IntPtr.Zero, "SHELLDLL_DefView", null);
                 if (p != IntPtr.Zero)
                 {
-                    WorkerWHwnd = User32.FindWindowEx(IntPtr.Zero, hWnd, "WorkerW", null);
+                    workerWHwnd = User32.FindWindowEx(IntPtr.Zero, hWnd, "WorkerW", null);
                     return false; // Break Enum
                 }
                 return true;
             }, IntPtr.Zero);
 
-            return WorkerWHwnd != IntPtr.Zero ? WorkerWHwnd : throw new Exception("Couldn't Find WorkerW");
+            return workerWHwnd != IntPtr.Zero ? workerWHwnd : throw new Exception("Couldn't Find WorkerW");
         }
     }
 }

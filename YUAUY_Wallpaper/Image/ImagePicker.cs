@@ -35,6 +35,7 @@ namespace YUAUY_Wallpaper.Image
         public int Count { get => _imagePaths.Count(); }
         public string[] SupportFiles { get; } =
             {
+                "JFIF",
                 "JPEG",
                 "JPG",
                 "PNG"
