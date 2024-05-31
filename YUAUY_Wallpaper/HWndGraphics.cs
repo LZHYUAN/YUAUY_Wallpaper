@@ -1,4 +1,6 @@
-﻿namespace YUAUY_Wallpaper;
+﻿using System.Drawing;
+
+namespace YUAUY_Wallpaper;
 
 public class HWndGraphics : IDisposable
 {
@@ -17,19 +19,17 @@ public class HWndGraphics : IDisposable
         Graphics.Dispose();
     }
 
-    public Bitmap PrintWindowToBitmap()
+    public Bitmap PrintToBitmap()
     {
-        Bitmap bitmap = new Bitmap(Rectangle.Width, Rectangle.Height);
-        using (Graphics graphics = Graphics.FromImage(bitmap))
-        {
-            PrintWindowToGraphics(graphics);
-        }
+        var bitmap = new Bitmap(Rectangle.Width, Rectangle.Height);
+        using var graphics = Graphics.FromImage(bitmap);
+        PrintToGraphics(graphics);
         return bitmap;
     }
-    public void PrintWindowToGraphics(Graphics graphics)
+    public void PrintToGraphics(Graphics graphics)
     {
         var hdc = graphics.GetHdc();
-        bool success = User32.PrintWindow(Handle, hdc, 0);
+         _ = User32.PrintWindow(Handle, hdc, 0);
         graphics.ReleaseHdc(hdc);
     }
 }
