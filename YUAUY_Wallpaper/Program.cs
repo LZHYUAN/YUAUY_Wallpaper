@@ -14,7 +14,11 @@ internal static class Program
         BufferedGraphicsManager.Current.MaximumBuffer = wallGraphics.Rectangle.Size;
         var wallBuffer = BufferedGraphicsManager.Current.Allocate(wallGraphics.Graphics, wallGraphics.Rectangle);
         wallGraphics.PrintToGraphics(wallBuffer.Graphics);
-        wallBuffer.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+        wallBuffer.Graphics.SmoothingMode = SmoothingMode.HighSpeed;
+        wallBuffer.Graphics.CompositingQuality = CompositingQuality.HighSpeed;
+        wallBuffer.Graphics.PixelOffsetMode = PixelOffsetMode.HighSpeed;
+        wallBuffer.Graphics.InterpolationMode = InterpolationMode.Low;
+
 
         ImagePicker imagePicker = new ImagePicker()
         {
@@ -32,8 +36,8 @@ internal static class Program
             wallBuffer.Render();
         }
 
-        var tmpBmp = wallGraphics.PrintToBitmap();
-        var tmpg = Graphics.FromImage(tmpBmp);
+        var baseImage = wallGraphics.PrintToBitmap();
+        var tmpg = Graphics.FromImage(baseImage);
         tmpg.SmoothingMode = SmoothingMode.AntiAlias;
 
         brush.Color = Color.FromArgb(5, 0, 0, 0);
@@ -52,7 +56,7 @@ internal static class Program
             {
                 brush.Dispose();
                 tmpg.Dispose();
-                tmpBmp.Dispose();
+                baseImage.Dispose();
                 wallBuffer.Dispose();
                 wallGraphics.Dispose();
                 GC.Collect();
@@ -68,9 +72,9 @@ internal static class Program
             var r = random.Next(-20, 20);
             var sr = (float)random.Next(50, 60) * (random.Next(2) * 2 - 1) + r;
             if (rs > 1) rs = 1;
-            var rbmp = new Bitmap((int)(img.Width * rs) + 20, (int)(img.Height * rs) + 20, PixelFormat.Format32bppArgb);
+            var nextBmp = new Bitmap((int)(img.Width * rs) + 20, (int)(img.Height * rs) + 20, PixelFormat.Format24bppRgb);
 
-            var g = Graphics.FromImage(rbmp);
+            var g = Graphics.FromImage(nextBmp);
             g.Clear(Color.White);
             g.DrawImage(img, 10, 10, (int)(img.Width * rs), (int)(img.Height * rs));
             g.Dispose();
@@ -80,48 +84,54 @@ internal static class Program
             var s = Screen.AllScreens.Select(screen => (double)screen.Bounds.Width * screen.Bounds.Height).ToArray();
             s = s.Select(size => size / s.Sum()).ToArray();
             var st = random.NextDouble();
-            int i = 0;
+            int nextScreen = 0;
             foreach (var t in s)
             {
                 st -= t;
                 if (st <= 0) break;
-                i++;
+                nextScreen++;
             }
 
-            int x = random.Next(Screen.AllScreens[i].Bounds.Width - 400) + 200 + Screen.AllScreens[i].Bounds.X;
-            int y = random.Next(Screen.AllScreens[i].Bounds.Height - 400) + 200 + Screen.AllScreens[i].Bounds.Y;
-
-            //wallBuffer.Graphics.FillRectangle(brush, -1, -1, wallGraphics.Rectangle.Width, wallGraphics.Rectangle.Height);
+            int x = random.Next(Screen.AllScreens[nextScreen].Bounds.Width - 400) + 200 + Screen.AllScreens[nextScreen].Bounds.X;
+            int y = random.Next(Screen.AllScreens[nextScreen].Bounds.Height - 400) + 200 + Screen.AllScreens[nextScreen].Bounds.Y;
 
 
-            var rrss = random.Next(4);
-            float gx = rrss < 2 ? (rrss < 1 ? -1500 : mx + 1500) : random.Next(mx - nx);
-            float gy = rrss > 1 ? (rrss > 2 ? -1500 : my + 1500) : random.Next(my - ny);
 
-            for (float tt = 0; tt <= 5; tt += first ? 1 : 0.05f)
+            int delay = 60;
+            DateTime nextTime = DateTime.Now + TimeSpan.FromMilliseconds(delay);
+
+            for (float time = 0f; time <= 1; time += first ? 0.25f : 0.03f)
             {
-                float t = (float)Math.Tanh(tt);
-                float rt = (float)Math.Tanh((tt) / 1.1);
-                //float rt = (float)Math.Sin(tt * Math.PI / 10);
-                wallBuffer.Graphics.DrawImage(tmpBmp, 0, 0); //reset
-                brush.Color = Color.FromArgb((int)(tt * 2), 0, 0, 0);
+                float timeA= 1.2f / MathF.Cosh(time *3f* MathF.PI+0.65f); // 1 to 0
+
+                wallBuffer.Graphics.DrawImageUnscaledAndClipped(baseImage, wallGraphics.Rectangle); //reset
+                brush.Color = Color.FromArgb((int)(time * 10), 0, 0, 0);
+
                 wallBuffer.Graphics.FillRectangle(brush, wallGraphics.Rectangle);
-                wallBuffer.Graphics.TranslateTransform((x - nx) - gx * t + gx, (y - ny) - gy * t + gy);
-                wallBuffer.Graphics.RotateTransform(r - sr * rt + sr);
-                wallBuffer.Graphics.DrawImage(rbmp, -rbmp.Width / 2, -rbmp.Height / 2);
+
+                wallBuffer.Graphics.TranslateTransform(x  + gx * timeA , y  + gy * timeA );
+                wallBuffer.Graphics.RotateTransform(r *(1-timeA));
+                wallBuffer.Graphics.DrawImageUnscaled(nextBmp, -nextBmp.Width / 2, -nextBmp.Height / 2);
                 wallBuffer.Graphics.ResetTransform();
                 wallBuffer.Render();
-                Task.Delay(0).Wait();
+
+                var waitTime = nextTime - DateTime.Now;
+                nextTime += TimeSpan.FromMilliseconds(delay);
+                if (waitTime.Milliseconds > 0)
+                    Task.Delay(waitTime).Wait();
             }
 
             tmpg.FillRectangle(brush, -1, -1, wallGraphics.Rectangle.Width + 2, wallGraphics.Rectangle.Height + 2);
             tmpg.TranslateTransform(x - nx, y - ny);
             tmpg.RotateTransform(r);
-            tmpg.DrawImage(rbmp, -rbmp.Width / 2, -rbmp.Height / 2);
+            tmpg.DrawImageUnscaled(nextBmp, -nextBmp.Width / 2, -nextBmp.Height / 2);
             tmpg.ResetTransform();
 
-            img.Dispose();
-            rbmp.Dispose();
+            wallBuffer.Graphics.DrawImageUnscaledAndClipped(baseImage, wallGraphics.Rectangle);
+            wallBuffer.Render();
+
+            //img.Dispose();
+            //rbmp.Dispose();
 
             if (first && firstCount < Screen.AllScreens.Length * 5) firstCount++;
             else first = false;
