@@ -8,54 +8,15 @@ namespace
 constexpr wchar_t kWindowClassName[] = L"YUAUYWallpaperWindow";
 constexpr wchar_t kWindowTitle[] = L"YUAUY Wallpaper DX";
 constexpr UINT_PTR kAnimationTimerId = 1;
-constexpr UINT_PTR kHostValidationTimerId = 2;
 constexpr UINT kFrameIntervalMs = 16;
-constexpr UINT kHostValidationIntervalMs = 2000;
 constexpr double kRotationStepRadians = 0.04;
 constexpr UINT kSpawnWorkerMessage = 0x052C;
-
-struct DesktopHostContext
-{
-    HWND progman = nullptr;
-    HWND shellView = nullptr;
-    HWND compatibilityWorkerW = nullptr;
-    bool shellViewUnderProgman = false;
-    RECT virtualScreen = {};
-};
 
 struct AppState
 {
     double angleRadians = 0.0;
     bool embedded = false;
-    DesktopHostContext host = {};
 };
-
-struct WorkerWSearch
-{
-    HWND shellViewHost = nullptr;
-    HWND shellView = nullptr;
-    HWND workerW = nullptr;
-};
-
-BOOL CALLBACK FindWorkerWCallback(HWND hwnd, LPARAM lParam)
-{
-    auto* search = reinterpret_cast<WorkerWSearch*>(lParam);
-    if (search == nullptr)
-    {
-        return FALSE;
-    }
-
-    HWND shellView = FindWindowExW(hwnd, nullptr, L"SHELLDLL_DefView", nullptr);
-    if (shellView == nullptr)
-    {
-        return TRUE;
-    }
-
-    search->shellViewHost = hwnd;
-    search->shellView = shellView;
-    search->workerW = FindWindowExW(nullptr, hwnd, L"WorkerW", nullptr);
-    return FALSE;
-}
 
 RECT GetPrimaryScreenRect()
 {
@@ -65,71 +26,6 @@ RECT GetPrimaryScreenRect()
     rect.right = GetSystemMetrics(SM_CXSCREEN);
     rect.bottom = GetSystemMetrics(SM_CYSCREEN);
     return rect;
-}
-
-RECT GetVirtualScreenRect()
-{
-    RECT rect = {};
-    rect.left = GetSystemMetrics(SM_XVIRTUALSCREEN);
-    rect.top = GetSystemMetrics(SM_YVIRTUALSCREEN);
-    rect.right = rect.left + GetSystemMetrics(SM_CXVIRTUALSCREEN);
-    rect.bottom = rect.top + GetSystemMetrics(SM_CYVIRTUALSCREEN);
-    return rect;
-}
-
-DesktopHostContext ResolveDesktopHostContext()
-{
-    DesktopHostContext context = {};
-    context.virtualScreen = GetVirtualScreenRect();
-    context.progman = FindWindowW(L"Progman", nullptr);
-    if (context.progman == nullptr)
-    {
-        return context;
-    }
-
-    DWORD_PTR result = 0;
-    SendMessageTimeoutW(
-        context.progman,
-        kSpawnWorkerMessage,
-        0,
-        0,
-        SMTO_NORMAL,
-        1000,
-        &result);
-
-    context.shellView = FindWindowExW(context.progman, nullptr, L"SHELLDLL_DefView", nullptr);
-    context.shellViewUnderProgman = (context.shellView != nullptr);
-
-    WorkerWSearch search = {};
-    EnumWindows(FindWorkerWCallback, reinterpret_cast<LPARAM>(&search));
-    if (context.shellView == nullptr)
-    {
-        context.shellView = search.shellView;
-    }
-
-    context.compatibilityWorkerW = search.workerW;
-    return context;
-}
-
-bool IsHostRelationshipValid(const AppState& state, HWND window)
-{
-    if (!IsWindow(window))
-    {
-        return false;
-    }
-
-    HWND parent = GetParent(window);
-    if (!IsWindow(parent))
-    {
-        return false;
-    }
-
-    if (state.host.progman != nullptr && parent == state.host.progman)
-    {
-        return true;
-    }
-
-    return state.host.compatibilityWorkerW != nullptr && parent == state.host.compatibilityWorkerW;
 }
 
 void ApplyLayeredWindowSettings(HWND window)
@@ -145,132 +41,14 @@ void NormalizeAsWallpaperChild(HWND window)
     SetWindowLongPtrW(window, GWL_STYLE, style);
 
     LONG_PTR exStyle = GetWindowLongPtrW(window, GWL_EXSTYLE);
-    exStyle |= WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW | WS_EX_LAYERED;
+    exStyle |= WS_EX_LAYERED | WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW;
     exStyle &= ~static_cast<LONG_PTR>(WS_EX_APPWINDOW);
     SetWindowLongPtrW(window, GWL_EXSTYLE, exStyle);
+
     ApplyLayeredWindowSettings(window);
 }
 
-void NormalizeAsPreviewWindow(HWND window)
-{
-    LONG_PTR style = GetWindowLongPtrW(window, GWL_STYLE);
-    style &= ~static_cast<LONG_PTR>(WS_CHILD);
-    style |= WS_OVERLAPPEDWINDOW | WS_VISIBLE;
-    SetWindowLongPtrW(window, GWL_STYLE, style);
-
-    LONG_PTR exStyle = GetWindowLongPtrW(window, GWL_EXSTYLE);
-    exStyle &= ~static_cast<LONG_PTR>(WS_EX_NOACTIVATE);
-    SetWindowLongPtrW(window, GWL_EXSTYLE, exStyle);
-    ApplyLayeredWindowSettings(window);
-}
-
-RECT GetParentRelativeRect(HWND parent, const RECT& screenRect)
-{
-    POINT topLeft = { screenRect.left, screenRect.top };
-    POINT bottomRight = { screenRect.right, screenRect.bottom };
-
-    ScreenToClient(parent, &topLeft);
-    ScreenToClient(parent, &bottomRight);
-
-    RECT rect = {};
-    rect.left = topLeft.x;
-    rect.top = topLeft.y;
-    rect.right = bottomRight.x;
-    rect.bottom = bottomRight.y;
-    return rect;
-}
-
-bool PositionWallpaperChild(HWND window, HWND parent, const DesktopHostContext& host)
-{
-    RECT targetRect = GetParentRelativeRect(parent, host.virtualScreen);
-    const int width = targetRect.right - targetRect.left;
-    const int height = targetRect.bottom - targetRect.top;
-    if (width <= 0 || height <= 0)
-    {
-        return false;
-    }
-
-    HWND insertAfter = HWND_BOTTOM;
-    if (parent == host.progman && host.shellViewUnderProgman && IsWindow(host.shellView) && GetParent(host.shellView) == parent)
-    {
-        insertAfter = host.shellView;
-    }
-
-    if (!SetWindowPos(
-            window,
-            insertAfter,
-            targetRect.left,
-            targetRect.top,
-            width,
-            height,
-            SWP_NOACTIVATE | SWP_SHOWWINDOW | SWP_FRAMECHANGED))
-    {
-        return false;
-    }
-
-    return RedrawWindow(window, nullptr, nullptr, RDW_INVALIDATE | RDW_UPDATENOW | RDW_ALLCHILDREN) != FALSE;
-}
-
-bool EmbedIntoHost(HWND window, HWND parent, const DesktopHostContext& host)
-{
-    if (!IsWindow(parent))
-    {
-        return false;
-    }
-
-    NormalizeAsWallpaperChild(window);
-    SetLastError(0);
-    if (SetParent(window, parent) == nullptr && GetLastError() != 0)
-    {
-        return false;
-    }
-
-    return PositionWallpaperChild(window, parent, host);
-}
-
-bool ShowPreviewWindow(HWND window)
-{
-    NormalizeAsPreviewWindow(window);
-    SetLastError(0);
-    SetParent(window, nullptr);
-
-    RECT virtualScreen = GetVirtualScreenRect();
-    const int width = std::max<int>(960, (virtualScreen.right - virtualScreen.left) / 2);
-    const int height = std::max<int>(540, (virtualScreen.bottom - virtualScreen.top) / 2);
-    const int x = virtualScreen.left + 80;
-    const int y = virtualScreen.top + 80;
-
-    return SetWindowPos(
-               window,
-               HWND_TOP,
-               x,
-               y,
-               width,
-               height,
-               SWP_SHOWWINDOW | SWP_FRAMECHANGED) != FALSE;
-}
-
-bool AttachToDesktopHost(HWND window, AppState& state)
-{
-    state.host = ResolveDesktopHostContext();
-
-    if (IsWindow(state.host.progman) && EmbedIntoHost(window, state.host.progman, state.host))
-    {
-        state.embedded = true;
-        return true;
-    }
-
-    if (IsWindow(state.host.compatibilityWorkerW) && EmbedIntoHost(window, state.host.compatibilityWorkerW, state.host))
-    {
-        state.embedded = true;
-        return true;
-    }
-
-    state.embedded = false;
-    return ShowPreviewWindow(window);
-}
-
-void DrawRotatingSquare(HDC hdc, const RECT& clientRect, double angleRadians, bool embedded)
+void DrawRotatingSquare(HDC hdc, const RECT& clientRect, double angleRadians)
 {
     const int width = clientRect.right - clientRect.left;
     const int height = clientRect.bottom - clientRect.top;
@@ -297,8 +75,7 @@ void DrawRotatingSquare(HDC hdc, const RECT& clientRect, double angleRadians, bo
         rotated[i].y = centerY + static_cast<LONG>(rotatedY);
     }
 
-    const COLORREF background = embedded ? RGB(18, 18, 24) : RGB(38, 30, 24);
-    HBRUSH backgroundBrush = CreateSolidBrush(background);
+    HBRUSH backgroundBrush = CreateSolidBrush(RGB(18, 18, 24));
     FillRect(hdc, &clientRect, backgroundBrush);
     DeleteObject(backgroundBrush);
 
@@ -314,6 +91,57 @@ void DrawRotatingSquare(HDC hdc, const RECT& clientRect, double angleRadians, bo
     SelectObject(hdc, oldPen);
     DeleteObject(squareBrush);
     DeleteObject(pen);
+}
+
+bool EmbedWindowIntoProgman(HWND window)
+{
+    HWND progman = FindWindowW(L"Progman", nullptr);
+    if (progman == nullptr)
+    {
+        return false;
+    }
+
+    DWORD_PTR messageResult = 0;
+    SendMessageTimeoutW(
+        progman,
+        kSpawnWorkerMessage,
+        0,
+        0,
+        SMTO_NORMAL,
+        1000,
+        &messageResult);
+
+    HWND defView = FindWindowExW(progman, nullptr, L"SHELLDLL_DefView", nullptr);
+    HWND workerW = FindWindowExW(nullptr, progman, L"WorkerW", nullptr);
+
+    NormalizeAsWallpaperChild(window);
+
+    SetLastError(0);
+    if (SetParent(window, progman) == nullptr && GetLastError() != 0)
+    {
+        return false;
+    }
+
+    RECT bounds = GetPrimaryScreenRect();
+    const int width = bounds.right - bounds.left;
+    const int height = bounds.bottom - bounds.top;
+    HWND insertAfter = defView != nullptr ? defView : HWND_BOTTOM;
+
+    UINT flags = SWP_SHOWWINDOW | SWP_NOACTIVATE | SWP_FRAMECHANGED;
+    if (!SetWindowPos(window, insertAfter, 0, 0, width, height, flags))
+    {
+        return false;
+    }
+
+    if (workerW != nullptr)
+    {
+        SetWindowPos(workerW, window, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
+    }
+
+    ApplyLayeredWindowSettings(window);
+    InvalidateRect(window, nullptr, FALSE);
+    UpdateWindow(window);
+    return true;
 }
 }
 
@@ -338,7 +166,7 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int)
     const int initialHeight = std::max<int>(360, primaryScreen.bottom - primaryScreen.top);
 
     HWND window = CreateWindowExW(
-        WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW | WS_EX_LAYERED,
+        WS_EX_LAYERED | WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW,
         kWindowClassName,
         kWindowTitle,
         WS_POPUP | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS,
@@ -381,40 +209,15 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
     {
         auto* state = new AppState();
         SetWindowLongPtrW(hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(state));
-
-        AttachToDesktopHost(hwnd, *state);
+        state->embedded = EmbedWindowIntoProgman(hwnd);
         SetTimer(hwnd, kAnimationTimerId, kFrameIntervalMs, nullptr);
-        SetTimer(hwnd, kHostValidationTimerId, kHostValidationIntervalMs, nullptr);
         return 0;
     }
     case WM_TIMER:
-        if (appState == nullptr)
-        {
-            return 0;
-        }
-
-        if (wParam == kAnimationTimerId)
+        if (appState != nullptr && wParam == kAnimationTimerId)
         {
             appState->angleRadians += kRotationStepRadians;
             InvalidateRect(hwnd, nullptr, FALSE);
-            return 0;
-        }
-
-        if (wParam == kHostValidationTimerId)
-        {
-            if (!IsHostRelationshipValid(*appState, hwnd))
-            {
-                AttachToDesktopHost(hwnd, *appState);
-            }
-            return 0;
-        }
-        return 0;
-    case WM_DISPLAYCHANGE:
-    case WM_DPICHANGED:
-    case WM_SETTINGCHANGE:
-        if (appState != nullptr)
-        {
-            AttachToDesktopHost(hwnd, *appState);
         }
         return 0;
     case WM_NCHITTEST:
@@ -430,14 +233,13 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
             HDC hdc = BeginPaint(hwnd, &paint);
             RECT clientRect = {};
             GetClientRect(hwnd, &clientRect);
-            DrawRotatingSquare(hdc, clientRect, appState->angleRadians, appState->embedded);
+            DrawRotatingSquare(hdc, clientRect, appState->angleRadians);
             EndPaint(hwnd, &paint);
             return 0;
         }
         break;
     case WM_DESTROY:
         KillTimer(hwnd, kAnimationTimerId);
-        KillTimer(hwnd, kHostValidationTimerId);
         delete appState;
         SetWindowLongPtrW(hwnd, GWLP_USERDATA, 0);
         PostQuitMessage(0);
