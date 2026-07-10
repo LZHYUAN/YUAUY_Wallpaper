@@ -1,0 +1,40 @@
+# Build output
+/out/
+/build/
+/bin/
+/lib/
+
+# CMake
+CMakeUserPresets.json
+CMakeCache.txt
+cmake_install.cmake
+compile_commands.json
+CTestTestfile.cmake
+Testing/
+CMakeFiles/
+
+# Visual Studio
+/.vs/
+*.VC.db
+*.VC.opendb
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# MSVC and linker outputs
+*.obj
+*.pdb
+*.ilk
+*.idb
+*.ipch
+*.pch
+*.exe
+*.dll
+*.lib
+*.exp
+
+# Logs and temporary files
+*.log
+*.tmp
+*.temp
