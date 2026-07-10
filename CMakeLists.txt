@@ -1,4 +1,4 @@
-﻿# CMakeList.txt: YUAUY_Wallpaper_DX 的 CMake 專案，在此包含來源及定義
+# CMakeList.txt: YUAUY_Wallpaper_DX 的 CMake 專案，在此包含來源及定義
 # 專案專屬邏輯。
 #
 cmake_minimum_required (VERSION 3.10)
@@ -12,7 +12,9 @@ endif()
 project ("YUAUY_Wallpaper_DX")
 
 # 將來源新增到此專案的可執行檔。
-add_executable (YUAUY_Wallpaper_DX "YUAUY_Wallpaper_DX.cpp" "YUAUY_Wallpaper_DX.h")
+add_executable (YUAUY_Wallpaper_DX WIN32 "YUAUY_Wallpaper_DX.cpp" "YUAUY_Wallpaper_DX.h")
+target_link_libraries(YUAUY_Wallpaper_DX PRIVATE user32 gdi32)
+target_compile_definitions(YUAUY_Wallpaper_DX PRIVATE UNICODE _UNICODE)
 
 if (CMAKE_VERSION VERSION_GREATER 3.12)
   set_property(TARGET YUAUY_Wallpaper_DX PROPERTY CXX_STANDARD 20)
