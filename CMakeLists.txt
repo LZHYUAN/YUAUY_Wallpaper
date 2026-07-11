@@ -12,7 +12,7 @@ endif()
 project ("YUAUY_Wallpaper_DX")
 
 # 將來源新增到此專案的可執行檔。
-add_executable (YUAUY_Wallpaper_DX WIN32 "YUAUY_Wallpaper_DX.cpp" "YUAUY_Wallpaper_DX.h")
+add_executable (YUAUY_Wallpaper_DX WIN32 "YUAUY_Wallpaper_DX_2.cpp" "YUAUY_Wallpaper_DX.h")
 target_link_libraries(YUAUY_Wallpaper_DX PRIVATE user32 gdi32)
 target_compile_definitions(YUAUY_Wallpaper_DX PRIVATE UNICODE _UNICODE)
 
