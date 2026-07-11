@@ -114,7 +114,7 @@ bool EmbedWindowIntoProgman(HWND window)
     HWND defView = FindWindowExW(progman, nullptr, L"SHELLDLL_DefView", nullptr);
     HWND workerW = FindWindowExW(nullptr, progman, L"WorkerW", nullptr);
 
-    NormalizeAsWallpaperChild(window);
+	//NormalizeAsWallpaperChild(window); // 問題出在這 只需要CraeteWindowExW時就加上WS_EX_LAYERED就可以了 不用再設置一次
 
     SetLastError(0);
     if (SetParent(window, progman) == nullptr && GetLastError() != 0)
@@ -169,7 +169,7 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int)
         WS_EX_LAYERED | WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW,
         kWindowClassName,
         kWindowTitle,
-        WS_POPUP | WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS,
+         WS_VISIBLE | WS_CLIPCHILDREN | WS_CLIPSIBLINGS,
         primaryScreen.left,
         primaryScreen.top,
         initialWidth,
@@ -186,8 +186,8 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int)
     }
 
     ApplyLayeredWindowSettings(window);
-    ShowWindow(window, SW_SHOWNOACTIVATE);
-    UpdateWindow(window);
+    //ShowWindow(window, SW_SHOWNOACTIVATE); // 不影響
+    //UpdateWindow(window); // 不影響
 
     MSG message = {};
     while (GetMessageW(&message, nullptr, 0, 0) > 0)
