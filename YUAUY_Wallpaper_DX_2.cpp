@@ -6,10 +6,12 @@ namespace
 {
 constexpr wchar_t kWindowClassName[] = L"YUAUYWallpaperWindow";
 constexpr wchar_t kWindowTitle[] = L"YUAUY Wallpaper DX";
+constexpr UINT kInitializeWallpaperMessage = WM_APP + 1;
 
 struct AppState
 {
     D3D11Renderer renderer;
+    bool rendererInitialized = false;
 };
 
 RECT GetPrimaryScreenRect()
@@ -82,44 +84,56 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
     {
         auto* state = new AppState();
         SetWindowLongPtrW(hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(state));
-
-        RECT primaryScreen = GetPrimaryScreenRect();
-        const int width = primaryScreen.right - primaryScreen.left;
-        const int height = primaryScreen.bottom - primaryScreen.top;
-
-        HWND progman = FindWindowW(L"Progman", nullptr);
-        if (progman != nullptr)
-        {
-            SendMessageW(progman, 0x052C, 0, 0);
-        }
-
-        HWND shellView = progman != nullptr ? FindWindowExW(progman, nullptr, L"SHELLDLL_DefView", nullptr) : nullptr;
-        HWND insertAfter = shellView != nullptr ? shellView : HWND_BOTTOM;
-
-        SetParent(hwnd, progman);
-
-        SetWindowPos(
-            hwnd,
-            insertAfter,
-            primaryScreen.left,
-            primaryScreen.top,
-            width,
-            height,
-            SWP_NOACTIVATE | SWP_SHOWWINDOW | SWP_FRAMECHANGED);
-
-        if (!state->renderer.Initialize(hwnd))
-        {
-            MessageBoxW(hwnd, L"Failed to initialize D3D11.", kWindowTitle, MB_ICONERROR | MB_OK);
-            delete state;
-            SetWindowLongPtrW(hwnd, GWLP_USERDATA, 0);
-            return -1;
-        }
-
-        state->renderer.Start();
+        PostMessageW(hwnd, kInitializeWallpaperMessage, 0, 0);
         return 0;
     }
+    case kInitializeWallpaperMessage:
+        if (appState == nullptr)
+        {
+            return 0;
+        }
+        if (appState->rendererInitialized)
+        {
+            return 0;
+        }
+
+        {
+            RECT primaryScreen = GetPrimaryScreenRect();
+            const int width = primaryScreen.right - primaryScreen.left;
+            const int height = primaryScreen.bottom - primaryScreen.top;
+
+            HWND progman = FindWindowW(L"Progman", nullptr);
+            if (progman != nullptr)
+            {
+                SendMessageW(progman, 0x052C, 0, 0);
+            }
+
+            HWND shellView = progman != nullptr ? FindWindowExW(progman, nullptr, L"SHELLDLL_DefView", nullptr) : nullptr;
+            HWND insertAfter = shellView != nullptr ? shellView : HWND_BOTTOM;
+
+            SetParent(hwnd, progman);
+            SetWindowPos(
+                hwnd,
+                insertAfter,
+                primaryScreen.left,
+                primaryScreen.top,
+                width,
+                height,
+                SWP_NOACTIVATE | SWP_SHOWWINDOW | SWP_FRAMECHANGED);
+
+            if (!appState->renderer.Initialize(hwnd))
+            {
+                MessageBoxW(hwnd, L"Failed to initialize D3D11.", kWindowTitle, MB_ICONERROR | MB_OK);
+                DestroyWindow(hwnd);
+                return 0;
+            }
+
+            appState->rendererInitialized = true;
+            appState->renderer.Start();
+        }
+        return 0;
     case WM_SIZE:
-        if (appState != nullptr && wParam != SIZE_MINIMIZED)
+        if (appState != nullptr && appState->rendererInitialized && wParam != SIZE_MINIMIZED)
         {
             appState->renderer.Resize();
         }
@@ -127,7 +141,10 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
     case WM_DESTROY:
         if (appState != nullptr)
         {
-            appState->renderer.Stop();
+            if (appState->rendererInitialized)
+            {
+                appState->renderer.Stop();
+            }
             delete appState;
             SetWindowLongPtrW(hwnd, GWLP_USERDATA, 0);
         }
@@ -137,4 +154,3 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT message, WPARAM wParam, LPARAM lPara
 
     return DefWindowProcW(hwnd, message, wParam, lParam);
 }
-
