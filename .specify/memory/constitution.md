@@ -40,9 +40,14 @@ transition and retain the currently displayed desktop image. At later measuremen
 MUST be able to resume once the configured recovery rule is satisfied. This guard MUST
 remain outside the preserved animation mathematics: load sensing and scheduling MAY gate
 when a transition begins, but MUST NOT alter its curves, monitor selection algorithm,
-or internal animation sequence. GPU utilization is the intended metric on real hardware;
-CPU utilization and a software-rendering path MUST support GPU-less WindowsEnv testing.
-Exact metric scope, thresholds, sampling, and hysteresis require a feature specification.
+or internal animation sequence. System-wide GPU utilization is the intended metric on real hardware;
+system-wide CPU utilization and a software-rendering path MUST support GPU-less
+WindowsEnv testing. Utilization MUST only be read when a scheduled picture transition
+is due, before new image selection or rendering; no independent background sampling
+thread, process, or periodic monitor is allowed while idle. The scheduler MUST
+preserve the current wallpaper when a transition is skipped due to high load, and
+MUST re-check only at its next scheduled rendering opportunity. Exact thresholds,
+retry scheduling, and hysteresis require a feature specification.
 
 ### V. Testable Equivalence and Explicit Evidence
 
@@ -90,4 +95,4 @@ MAJOR for incompatible removal/redefinition of principles, MINOR for adding or m
 expanding principles, PATCH for non-semantic clarification. Before implementation/PR review,
 check compliance with all five principles; record any exception and its explicit approval.
 
-**Version**: 1.0.0 | **Ratified**: 2026-10-31 | **Last Amended**: 2026-10-31
+**Version**: 1.1.0 | **Ratified**: 2026-10-31 | **Last Amended**: 2026-10-31
