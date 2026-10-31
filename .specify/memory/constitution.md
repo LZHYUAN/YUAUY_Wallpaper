@@ -10,9 +10,12 @@ including the original hyperbolic-cosine time functions, four animation phases, 
 rotation, scaling, alpha/cover sequence, image sizing and placement, monitor-area-weighted
 selection, independent per-monitor images, and the normal slideshow transition cadence.
 The original startup fast-forward behavior is explicitly superseded by the owner-approved
-opening composition: show a central main image first, then slide ten background photos
-behind it with randomized, overlapping start times. This startup-only exception MUST
-NOT be applied to ordinary slideshow transitions. No easing substitution, normalization
+opening composition: on EACH monitor show one central main image first, then slide ten
+background photos behind it with randomized, overlapping start times. A full startup
+composition therefore contains eleven photos per monitor when enough images exist.
+Startup MUST bypass GPU/CPU utilization gating even if the system is busy and MUST NOT
+read utilization during startup. This startup-only exception MUST NOT be applied to
+ordinary slideshow transitions. No easing substitution, normalization
 of the original formulas, or silent redesign of normal selection logic is permitted. When `YUAUY_Wallpaper/Form1.cs` and `YUAUY_Wallpaper/Program.cs` differ,
 implementation MUST document the difference and seek clarification instead of inventing
 which version is authoritative. The C# reference and `directx_build` branch MUST NOT be edited.
@@ -100,4 +103,4 @@ MAJOR for incompatible removal/redefinition of principles, MINOR for adding or m
 expanding principles, PATCH for non-semantic clarification. Before implementation/PR review,
 check compliance with all five principles; record any exception and its explicit approval.
 
-**Version**: 2.0.0 | **Ratified**: 2026-10-31 | **Last Amended**: 2026-10-31
+**Version**: 2.1.0 | **Ratified**: 2026-10-31 | **Last Amended**: 2026-11-01
