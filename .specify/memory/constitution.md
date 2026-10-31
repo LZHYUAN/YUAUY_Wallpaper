@@ -8,9 +8,12 @@ The historical `master` branch is a read-only behavioral reference. The Rust rew
 preserve the observable animation and multi-monitor behavior already validated there,
 including the original hyperbolic-cosine time functions, four animation phases, translation,
 rotation, scaling, alpha/cover sequence, image sizing and placement, monitor-area-weighted
-selection, independent per-monitor images, and the existing startup/transition cadence.
-No easing substitution, normalization of the formulas, or silent redesign of selection logic
-is permitted. When `YUAUY_Wallpaper/Form1.cs` and `YUAUY_Wallpaper/Program.cs` differ,
+selection, independent per-monitor images, and the normal slideshow transition cadence.
+The original startup fast-forward behavior is explicitly superseded by the owner-approved
+opening composition: show a central main image first, then slide ten background photos
+behind it with randomized, overlapping start times. This startup-only exception MUST
+NOT be applied to ordinary slideshow transitions. No easing substitution, normalization
+of the original formulas, or silent redesign of normal selection logic is permitted. When `YUAUY_Wallpaper/Form1.cs` and `YUAUY_Wallpaper/Program.cs` differ,
 implementation MUST document the difference and seek clarification instead of inventing
 which version is authoritative. The C# reference and `directx_build` branch MUST NOT be edited.
 
@@ -26,7 +29,9 @@ NOT supersede behavior established by `master`.
 ### III. Complete App with System Tray and YAML Configuration
 
 The shipped product MUST operate as a complete Windows wallpaper application with a system
-tray control surface and YAML configuration file. Configuration MUST be validated before
+tray control surface and YAML configuration file. Normal slideshow timing and system-wide
+GPU high-load/recovery thresholds MUST be configurable in YAML; neither may be silently
+hardcoded into the executable. Configuration MUST be validated before
 application; invalid YAML or unsafe values MUST produce a useful error and MUST NOT corrupt
 previously valid settings. User-specific absolute picture paths found in historical source
 MUST NOT be baked into the released executable. Specific tray commands, defaults, and
@@ -95,4 +100,4 @@ MAJOR for incompatible removal/redefinition of principles, MINOR for adding or m
 expanding principles, PATCH for non-semantic clarification. Before implementation/PR review,
 check compliance with all five principles; record any exception and its explicit approval.
 
-**Version**: 1.1.0 | **Ratified**: 2026-10-31 | **Last Amended**: 2026-10-31
+**Version**: 2.0.0 | **Ratified**: 2026-10-31 | **Last Amended**: 2026-10-31
