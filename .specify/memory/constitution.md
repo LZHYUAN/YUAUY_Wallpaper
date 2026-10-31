@@ -78,8 +78,9 @@ cycles. One usable photo is sufficient for a full startup composition by spannin
 With zero usable photos, the application MUST NOT render photos or initiate transition
 animations and MUST clearly show "沒有圖片" in the system tray while keeping controls
 accessible. Corrupt or missing photos MUST NOT cause crashes or busy retry loops. No
-background directory polling is allowed merely to refresh the image catalog; empty-state
-recovery timing is specified through SDD clarification.
+background directory polling is allowed merely to refresh the image catalog. In empty
+state the existing normal slideshow timer is the only automatic rescan trigger: scan
+once on each due time, then return to idle; tray-initiated reload MAY scan immediately.
 
 ## Platform and Configuration Constraints
 
@@ -117,4 +118,4 @@ MAJOR for incompatible removal/redefinition of principles, MINOR for adding or m
 expanding principles, PATCH for non-semantic clarification. Before implementation/PR review,
 check compliance with all five principles; record any exception and its explicit approval.
 
-**Version**: 2.2.0 | **Ratified**: 2026-10-31 | **Last Amended**: 2026-11-01
+**Version**: 2.2.1 | **Ratified**: 2026-10-31 | **Last Amended**: 2026-11-01
