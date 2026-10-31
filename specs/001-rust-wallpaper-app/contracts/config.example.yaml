@@ -1,0 +1,13 @@
+# PROPOSED example — NOT yet a committed product default.
+# Save as the per-user YUAUY Wallpaper YAML configuration.
+# Paths are examples only; replace with your own Windows image folders.
+image_folders:
+  - 'C:\Users\Public\Pictures'
+slideshow_interval_seconds: 30   # proposal: original C# Release interval
+load_guard:
+  enabled: true
+  metric: gpu_total            # production: whole-GPU; WindowsEnv test: cpu_total
+  pause_at_percent: 80         # proposed threshold; requires final owner review
+  resume_at_percent: 60        # proposed recovery threshold; lower than pause
+# No load-sampling interval; sampling happens only when a transition is due.
+# Empty image source rescans only at slideshow_interval_seconds deadlines.
