@@ -67,6 +67,20 @@ rendering tests; a successful CPU/WARP run MUST NOT be presented as proof of phy
 compatibility or hardware utilization detection. Physical GPU and multi-monitor acceptance
 MUST be separately demonstrated or explicitly reported as unverified before release.
 
+### VI. Shared Non-Repeating Image Source and Empty-State Safety
+
+The startup compositor and all monitor transitions MUST obtain photos from a single
+shared image-provider component consistent with the reference C# ImagePicker. Each
+randomized cycle MUST use every available unique image once before beginning a new
+cycle. On cycle exhaustion, the component MUST refresh the configured image directories
+and assemble a new shuffled cycle; repeated photos are permitted only across completed
+cycles. One usable photo is sufficient for a full startup composition by spanning cycles.
+With zero usable photos, the application MUST NOT render photos or initiate transition
+animations and MUST clearly show "沒有圖片" in the system tray while keeping controls
+accessible. Corrupt or missing photos MUST NOT cause crashes or busy retry loops. No
+background directory polling is allowed merely to refresh the image catalog; empty-state
+recovery timing is specified through SDD clarification.
+
 ## Platform and Configuration Constraints
 
 - Preserve historical branches `master` and `directx_build`; all new development originates
@@ -103,4 +117,4 @@ MAJOR for incompatible removal/redefinition of principles, MINOR for adding or m
 expanding principles, PATCH for non-semantic clarification. Before implementation/PR review,
 check compliance with all five principles; record any exception and its explicit approval.
 
-**Version**: 2.1.0 | **Ratified**: 2026-10-31 | **Last Amended**: 2026-11-01
+**Version**: 2.2.0 | **Ratified**: 2026-10-31 | **Last Amended**: 2026-11-01
