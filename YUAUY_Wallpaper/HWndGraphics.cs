@@ -7,6 +7,7 @@ public class HWndGraphics : IDisposable
     public HWndGraphics(IntPtr hWnd)
     {
         Handle = hWnd;
+
         Graphics = Graphics.FromHwnd(Handle);
         Rectangle = new Rectangle(0, 0, (int)Graphics.VisibleClipBounds.Width, (int)Graphics.VisibleClipBounds.Height);
     }
