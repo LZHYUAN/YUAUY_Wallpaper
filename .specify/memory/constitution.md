@@ -1,50 +1,93 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+# YUAUY Wallpaper Constitution
 
 ## Core Principles
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+### I. Preserve the Proven C# Behavior (NON-NEGOTIABLE)
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+The historical `master` branch is a read-only behavioral reference. The Rust rewrite MUST
+preserve the observable animation and multi-monitor behavior already validated there,
+including the original hyperbolic-cosine time functions, four animation phases, translation,
+rotation, scaling, alpha/cover sequence, image sizing and placement, monitor-area-weighted
+selection, independent per-monitor images, and the existing startup/transition cadence.
+No easing substitution, normalization of the formulas, or silent redesign of selection logic
+is permitted. When `YUAUY_Wallpaper/Form1.cs` and `YUAUY_Wallpaper/Program.cs` differ,
+implementation MUST document the difference and seek clarification instead of inventing
+which version is authoritative. The C# reference and `directx_build` branch MUST NOT be edited.
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+### II. Rust and Direct3D on Windows 11
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+The new product MUST be implemented in Rust, targeting Windows 11 24H2 and newer. Rendering
+SHOULD use Direct3D 11 unless evidence and an explicit approved specification justify a
+change. Windows shell/WorkerW integration, monitor enumeration, DPI/scaling, resource
+recreation after display changes, and clean shutdown MUST be designed and tested as
+independent concerns. The unfinished C++ `directx_build` branch MAY be consulted, but MUST
+NOT supersede behavior established by `master`.
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+### III. Complete App with System Tray and YAML Configuration
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+The shipped product MUST operate as a complete Windows wallpaper application with a system
+tray control surface and YAML configuration file. Configuration MUST be validated before
+application; invalid YAML or unsafe values MUST produce a useful error and MUST NOT corrupt
+previously valid settings. User-specific absolute picture paths found in historical source
+MUST NOT be baked into the released executable. Specific tray commands, defaults, and
+configuration schema are specified through SDD and MUST NOT be assumed from prototypes.
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
+### IV. Resource-Aware Scheduling Without Animation Drift
 
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
+The application MUST support a configurable resource-load guard: when a chosen utilization
+metric exceeds its configured high-load rule, it MUST defer starting the next picture
+transition and retain the currently displayed desktop image. At later measurements it
+MUST be able to resume once the configured recovery rule is satisfied. This guard MUST
+remain outside the preserved animation mathematics: load sensing and scheduling MAY gate
+when a transition begins, but MUST NOT alter its curves, monitor selection algorithm,
+or internal animation sequence. GPU utilization is the intended metric on real hardware;
+CPU utilization and a software-rendering path MUST support GPU-less WindowsEnv testing.
+Exact metric scope, thresholds, sampling, and hysteresis require a feature specification.
 
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+### V. Testable Equivalence and Explicit Evidence
+
+Every behavior-protection or scheduling requirement MUST be represented by verifiable tests
+or reproducible test procedures. Unit tests MUST cover animation formula samples, monitor
+selection and geometry, image sequence, and utilization-gate state transitions. WindowsEnv
+(Windows 11 25H2) MUST be used for the available Windows integration and CPU/software
+rendering tests; a successful CPU/WARP run MUST NOT be presented as proof of physical GPU
+compatibility or hardware utilization detection. Physical GPU and multi-monitor acceptance
+MUST be separately demonstrated or explicitly reported as unverified before release.
+
+## Platform and Configuration Constraints
+
+- Preserve historical branches `master` and `directx_build`; all new development originates
+  from `rust_build` and feature branches or PRs derived from that work.
+- The original C# implementation is a behavioral reference, not a dependency of the Rust
+  executable. Newly added GPU/CPU load gating is an approved extension to legacy behavior.
+- On Windows systems without usable graphics hardware, use a supported Direct3D software
+  route (e.g., WARP) to validate rendering and UI integration where feasible. Availability
+  must be verified on the actual testing machine.
+- Never require users to disclose or commit local photo collections, personal YAML
+  configurations, machine paths, tokens, or private logs.
+
+## Quality and Delivery Gates
+
+- Follow GitHub Spec Kit: constitution -> specify -> clarify -> plan -> tasks -> implement
+  -> analyze/verification. Do not treat unresolved product requirements as implemented.
+- Before implementing each feature, record its observable behavior, acceptance criteria,
+  and reference behavior (when applicable). Use small, reviewable changes on the Rust workline.
+- Test deterministic math/selection behavior without a GPU, and isolate Windows hardware
+  and shell interactions behind testable interfaces.
+- Verify behavior on WindowsEnv and record Windows build, rendering path, test outcome,
+  and any limitations. Require a separate physical-GPU and representative multi-monitor
+  acceptance gate before claiming full production validation.
+- A change that knowingly deviates from the legacy animation or multi-monitor semantics
+  requires explicit owner approval and an updated specification; refactoring alone is not
+  permission to change behavior.
 
 ## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+This constitution takes precedence over informal implementation preferences, exploratory
+branches, and automated agent suggestions. Changes to it MUST be proposed with rationale,
+impact on specifications/tests, and project-owner approval. Apply semantic versioning:
+MAJOR for incompatible removal/redefinition of principles, MINOR for adding or materially
+expanding principles, PATCH for non-semantic clarification. Before implementation/PR review,
+check compliance with all five principles; record any exception and its explicit approval.
 
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+**Version**: 1.0.0 | **Ratified**: 2026-10-31 | **Last Amended**: 2026-10-31
