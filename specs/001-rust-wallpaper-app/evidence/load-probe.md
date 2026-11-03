@@ -1,6 +1,6 @@
 # T011 — bounded one-shot system-wide CPU and GPU counter probe
 
-**Status: PARTIAL — diagnostic and portable aggregation tests implemented; hosted Windows execution and WindowsEnv validation pending. Keep T011 unchecked until results are reviewed.**
+**Status: T011 API-probe task COMPLETED. Windows-hosted diagnostic results recorded; production GPU guard and WindowsEnv/physical GPU acceptance explicitly remain unverified.**
 
 ## API selections and guarantees
 
@@ -20,8 +20,22 @@
 
 - TDD RED: `cargo test --locked --test usage_probe_math --target x86_64-unknown-linux-gnu` initially failed with E0432 (missing module). GREEN: **5/5** tests for aggregate CPU math, counter invalidity, per-process GPU engine grouping, busiest engine and rejection of contradictory over-100% results.
 - Windows MSVC `cargo clippy --locked --all-targets --target x86_64-pc-windows-msvc -- -D warnings` passed.
-- GitHub hosted Windows runner one-shot CPU and GPU outputs: **PENDING** until the pushed workflow executes.
+- GitHub hosted Windows runner one-shot CPU and GPU outputs: **PASS for CPU / SKIPPED for GPU** in [workflow 41679718337](https://github.com/LZHYUAN/YUAUY_Wallpaper/actions/runs/41679718337), job 126069840201, source commit bb40e93.
 - WindowsEnv 25H2 CPU/GPU availability, per-call wall time and fallback: **SKIPPED** until non-disruptive command execution is available.
 - Physical GPU Task Manager parity and threshold-60 acceptance: **SKIPPED**, production integration belongs to later tasks.
 
-**Current verdict:** CPU counter semantics and GPU aggregation method are deterministic-test verified, but real GPU readings are not production-approved. Do not mark overall GPU load check as implemented.
+**Current verdict:** T011 has exercised and timed the Windows APIs and documented the missing-usable-GPU-sample fallback; it does not implement or approve the product GPU threshold gate. In particular, physical GPU usage remains **Unknown**, not zero, if the quick sample cannot be collected.
+
+## Observed Windows GitHub runner evidence — 2026-11-04
+
+[Windows CI workflow 41679718337](https://github.com/LZHYUAN/YUAUY_Wallpaper/actions/runs/41679718337), job `126069840201` successfully built and executed both one-shot probes. Exact output:
+
+```text
+PASS metric=cpu_total percent=4.000 elapsed_ms=200 global_system=true sample_count=2
+SKIPPED metric=gpu_total reason=budget_exceeded_before_collect elapsed_ms=310
+```
+
+- **CPU**: whole-system calculation returned 4.0% from two system-wide samples in 200 ms on **that runner only**. It is not a WindowsEnv CPU-load measurement and is not a claim of accuracy on all hosts.
+- **GPU**: wildcard-path discovery/expansion took too much of the 400 ms total budget before a reliable collection could begin (310 ms elapsed). The probe refused to sample and reported **SKIPPED** instead of 0. The presence of a wildcard PDH path does **not** establish presence of a discrete/physical GPU.
+- **CPU fallback**: an explicit YAML `metric: cpu_total` chooses the whole-system CPU path for a GPU-less WindowsEnv. The probe deliberately does **not** auto-switch from a failing GPU choice to CPU. No continuous calibration, background polling or filesystem watcher was started.
+- **Remaining product work**: T006/T008/T009 WindowsEnv gating, real GPU PDH/driver accuracy comparisons, a hard bounded execution strategy and normal-slide-deadline scheduling belong to later implementation and acceptance.
