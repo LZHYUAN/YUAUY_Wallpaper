@@ -1,21 +1,25 @@
 # System Tray and Application Command Contract
 
-**Status**: Proposed user-facing Win32 tray behavior; no code exists yet.
+**Status**: User-approved tray commands and immediate Windows sign-in autostart behavior; no executable or OS registry writes have occurred yet.
 
 | Command / status | Visible behavior | Internal action |
 | --- | --- | --- |
-| Status: `Ready` | `YUAUY Wallpaper — 執行中` | Normal interval active; no continuous rendering between animations. |
-| Status: `NoImages` | `YUAUY Wallpaper — 沒有圖片` | Display status, keep controls and normal due timer; zero images => zero image draws and zero GPU reads. |
-| `開啟設定檔` | Open user's YAML in default editor | Does not apply edits until reload. |
-| `重新載入設定` | Show confirmation/error status | Validate YAML atomically, rebuild image source and reschedule safely; when previously `NoImages`, perform one immediate scan without waiting for interval. |
-| `暫停輪播` | Tray shows `已暫停` | Retain current composited wallpaper; do not start new normal transitions. |
-| `繼續輪播` | Tray shows `執行中` or `沒有圖片` | Resume from current state; proposed policy schedules a fresh normal interval (not an immediate catch-up burst). |
-| `結束` | Icon disappears, no dangling overlay windows | Graceful renderer/window release; retain normal Windows desktop operation. |
-| YAML parse / IO error | Status reports setting error without repeated popups | Preserve last valid configuration and scene, leave tray available. |
-| GPU sample unavailable | `負載無法測量` (non-spamming status/log) | Proposed policy: skip that normal due-time animation; next attempt at next full interval, not treat unavailable as zero. |
+| Status: `Ready` | `YUAUY Wallpaper — 執行中` | Normal slideshow interval (default 30 seconds); no continuous rendering between animations. |
+| Status: `NoImages` | `YUAUY Wallpaper — 沒有圖片` | Keep tray and timer; zero image draws/CPU-GPU reads. Once per normal deadline scan source and auto-resume on success. |
+| `開啟設定檔` | Open user's YAML in default editor | Edits apply only after reload. |
+| `重新載入設定` | Confirmation or readable error | Parse YAML atomically; apply folder, interval, guard settings; on `NoImages` immediately scan once; do not affect Windows sign-in autostart. |
+| `暫停輪播` | Checkmarked `已暫停` state | Retain current wallpaper and suppress ordinary transitions; no GPU/background polling. |
+| `繼續輪播` | `執行中` or `沒有圖片` | Resume from state; schedule next normal interval without catch-up burst. |
+| `登入 Windows 後自動啟動` (checkbox) | Checkmark equals OS read-back state, not local requested boolean | ON immediately create app-owned HKCU Run entry with the current exe path; OFF immediately delete that value; read back and update checked state only if successful. |
+| Auto-start write fails | Error appears and checkbox reflects actual Windows state | Read back; keep error visible; never claim success, delay change to exit, or modify unrelated startup entries. |
+| `結束` | Exit and remove notification icon | Clean resources; do **not** silently disable the user's Windows sign-in autostart preference. |
+| YAML parse/IO error | Clearly reported without repeated modal alerts | Preserve last valid YAML state and compositor. |
+| GPU sample unavailable | Non-spamming status/log | Proposed policy: skip that due transition, retry at next full interval; never treat unavailable as 0. |
 
-**Empty-source auto recovery**: at each normal slideshow deadline (not a separate watcher) perform one folder scan. If usable photos are found, clear `沒有圖片` and resume display. Do not issue a balloon notification on each empty tick. Only user-initiated reload can cause a scan outside an automatic scheduled deadline.
+**Startup semantics**: "登入 Windows 後自動啟動" means current-user **sign-in**, not power-on before login, and not a system service. The app must not require elevated privileges. Use a single app-owned HKCU Run value, quote executable paths containing spaces, verify write/delete with a read-back, and recheck OS state each time the tray menu is opened. Windows may defer launch; if an external tool disables autostart, never represent a mere registration as a guaranteed process start. See [autostart.md](autostart.md).
 
-**Notification framework**: Win32 `Shell_NotifyIcon` and a hidden message window for menu callbacks; no large always-open settings UI is required. Explorer restart recovery and tray re-registration are acceptance tests.
+**Empty-source auto recovery**: The existing slideshow deadline triggers one folder scan. If usable photos are found, clear `沒有圖片` and resume display. Do not issue a notification balloon on every empty tick. Only explicit tray reload performs an unscheduled directory scan.
 
-**Accessibility / language**: initial UI is Traditional Chinese; prefer descriptive menu items and state tooltip instead of relying on icon color alone. Never make an error require a modal dialog to quit or edit settings.
+**Notification framework**: Win32 `Shell_NotifyIcon` and hidden message window for menu callbacks; no permanent settings window required. Explorer restart/tray re-registration are acceptance tests.
+
+**Accessibility/language**: Traditional Chinese menu and status text; distinguish checked state from disabled/unavailable, and surface error text independent of icon color. Do not require a modal dialog to quit or edit settings.

@@ -24,7 +24,11 @@ which version is authoritative. The C# reference and `directx_build` branch MUST
 
 The new product MUST be implemented in Rust, targeting Windows 11 24H2 and newer. Rendering
 SHOULD use Direct3D 11 unless evidence and an explicit approved specification justify a
-change. Windows shell/WorkerW integration, monitor enumeration, DPI/scaling, resource
+change. While an animation is active, presentation MUST target the current display
+refresh rate using vertical synchronization instead of an old fixed 40 ms frame step.
+Animation progress MUST be based on elapsed time and preserve the validated original
+curves and transition time scale, independent of 60/120/144 Hz displays; idle MUST NOT
+render continuously. Windows shell/WorkerW integration, monitor enumeration, DPI/scaling, resource
 recreation after display changes, and clean shutdown MUST be designed and tested as
 independent concerns. The unfinished C++ `directx_build` branch MAY be consulted, but MUST
 NOT supersede behavior established by `master`.
@@ -32,9 +36,13 @@ NOT supersede behavior established by `master`.
 ### III. Complete App with System Tray and YAML Configuration
 
 The shipped product MUST operate as a complete Windows wallpaper application with a system
-tray control surface and YAML configuration file. Normal slideshow timing and system-wide
-GPU high-load/recovery thresholds MUST be configurable in YAML; neither may be silently
-hardcoded into the executable. Configuration MUST be validated before
+tray control surface and YAML configuration file. Normal slideshow timing MUST default
+to 30 seconds and a SINGLE system-wide GPU utilization threshold MUST default to 60%;
+both MUST be adjustable in YAML. The load guard MUST NOT introduce a separate recovery
+threshold or hysteresis. The tray MUST offer an immediate enable/disable toggle for
+current-user Windows sign-in autostart, write the actual OS registration on click, and
+read it back before showing success. The Windows registration, not YAML, is authoritative
+for autostart. Configuration MUST be validated before
 application; invalid YAML or unsafe values MUST produce a useful error and MUST NOT corrupt
 previously valid settings. User-specific absolute picture paths found in historical source
 MUST NOT be baked into the released executable. Specific tray commands, defaults, and
@@ -53,9 +61,11 @@ system-wide CPU utilization and a software-rendering path MUST support GPU-less
 WindowsEnv testing. Utilization MUST only be read when a scheduled picture transition
 is due, before new image selection or rendering; no independent background sampling
 thread, process, or periodic monitor is allowed while idle. The scheduler MUST
-preserve the current wallpaper when a transition is skipped due to high load, and
-MUST re-check only at its next scheduled rendering opportunity. Exact thresholds,
-retry scheduling, and hysteresis require a feature specification.
+preserve the current wallpaper when a transition is skipped due to load at or
+above the single threshold, and MUST re-check only at its next scheduled rendering
+opportunity. Readings below the same threshold permit the transition; there is no
+hysteresis or long-term calibration requirement. A single short bounded measuring
+operation at a due time is allowed; idle monitoring is not.
 
 ### V. Testable Equivalence and Explicit Evidence
 
@@ -118,4 +128,4 @@ MAJOR for incompatible removal/redefinition of principles, MINOR for adding or m
 expanding principles, PATCH for non-semantic clarification. Before implementation/PR review,
 check compliance with all five principles; record any exception and its explicit approval.
 
-**Version**: 2.2.1 | **Ratified**: 2026-10-31 | **Last Amended**: 2026-11-01
+**Version**: 2.3.0 | **Ratified**: 2026-10-31 | **Last Amended**: 2026-11-03

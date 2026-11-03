@@ -1,13 +1,13 @@
-# PROPOSED example — NOT yet a committed product default.
-# Save as the per-user YUAUY Wallpaper YAML configuration.
-# Paths are examples only; replace with your own Windows image folders.
+# YUAUY Wallpaper — user-approved defaults (2026-11-03).
+# All values below can be edited and reloaded from the system tray.
+# The Windows login autostart checkbox is managed directly by Windows, NOT in YAML.
 image_folders:
   - 'C:\Users\Public\Pictures'
-slideshow_interval_seconds: 30   # proposal: original C# Release interval
+slideshow_interval_seconds: 30
 load_guard:
   enabled: true
-  metric: gpu_total            # production: whole-GPU; WindowsEnv test: cpu_total
-  pause_at_percent: 80         # proposed threshold; requires final owner review
-  resume_at_percent: 60        # proposed recovery threshold; lower than pause
-# No load-sampling interval; sampling happens only when a transition is due.
-# Empty image source rescans only at slideshow_interval_seconds deadlines.
+  metric: gpu_total       # WindowsEnv without a GPU: cpu_total
+  threshold_percent: 60  # Single threshold: >=60 skip, <60 proceed
+# No resume threshold, no polling interval, no long calibration process.
+# When no images exist, rescan only on the normal slideshow deadline.
+# During animation, frame presentation targets display refresh via VSync.

@@ -1,20 +1,21 @@
 # User Configuration Contract (YAML)
 
-**Status**: Proposed schema for `$speckit-plan`; not an implemented file format. [Sample](config.example.yaml).
+**Status**: Approved defaults and semantics as of 2026-11-03; Rust parser implementation is not written. [Sample](config.example.yaml).
 
-| Key | Type | Required / validation | Semantics |
+| Key | Type | Default / validation | Semantics |
 | --- | --- | --- | --- |
-| `image_folders` | sequence of UTF-8 path strings | Required; unique paths; empty array is permitted and produces `NoImages` | Shared folders for all monitors and intro; default scan non-recursive as original C# picker. No photo data sent outside machine. |
-| `slideshow_interval_seconds` | positive integer | Required; must be > 0; upper bound and minimum safe value to be selected during implementation tests | Time between normal transition opportunities, and between empty-state re-scans or load skips. No background GPU polling. |
-| `load_guard.enabled` | boolean | Required | Disable/enable GPU gate for *normal* slideshow transitions only; never applies to opening composition. |
-| `load_guard.metric` | enum `gpu_total`, `cpu_total` | Required | `gpu_total` default for real hardware; `cpu_total` for WindowsEnv/diagnostics without GPU; automatic fallback behavior to be validated, not silently invented. |
-| `load_guard.pause_at_percent` | number | Required; 0 through 100 inclusive | Transition due with measured use >= high threshold is skipped, keeping static image. |
-| `load_guard.resume_at_percent` | number | Required; >=0, < pause threshold | If a load skip has occurred, transitions resume when the due-time measurement <= recovery threshold. |
+| `image_folders` | sequence of Windows folder paths | Required; unique paths; empty array allowed and produces `NoImages` | Global source for all monitors. Nonrecursive directory scan unless user requests a future change. |
+| `slideshow_interval_seconds` | positive integer | **30** if omitted; must be greater than zero | Delay between normal transition opportunities, high-GPU skips, and empty-source rescans; changing it on reload changes future deadlines. |
+| `load_guard.enabled` | boolean | `true` if omitted | Controls load gating for normal slideshow only, never startup composition. |
+| `load_guard.metric` | `gpu_total` or `cpu_total` | `gpu_total` if omitted | Production uses best-effort system-wide GPU; GPU-less WindowsEnv testing uses system-wide CPU. |
+| `load_guard.threshold_percent` | number | **60** if omitted; range 0 to 100 inclusive | ONE threshold: usage `>=` this value means skip normal transition; below means allow, with no hysteresis or separate recovery value. |
 
-**Other constraints**: duplicate/unknown keys should be rejected clearly; do not leak image paths into routine logs. Parse YAML completely before switching live config; `ReloadConfig` on bad YAML reports an error and preserves the last valid settings. Open YAML via system default editor. If folder is inaccessible, mark as source warning and skip it safely; when none contain usable images use `NoImages`.
+**Removed keys**: `load_guard.pause_at_percent` and `load_guard.resume_at_percent` are not accepted. There is no `gpu_poll_interval`, `directory_poll_interval`, `background_monitor`, `autostart`, `refresh_rate_cap`, `target_fps` or setting to alter the original slideshow math. The VSync target follows each monitor's effective display refresh rate only while animation runs.
 
-**No config entries**: `gpu_poll_interval`, `directory_poll_interval`, `background_monitor`, `monitor_images`, or settings for altering the original slideshow math. These would contradict the owner requirements or constitute an unapproved product extension.
+**Parsing and state**: Validate the entire YAML before atomically applying. Unknown/old keys and invalid numeric values produce an understandable status in the tray while keeping the last valid configuration and static wallpaper. A missing image folder is not a crash; no valid photos means `NoImages` with the normal-timer rescan rule. Use case-insensitive supported JPG/JPEG/JFIF/PNG extensions and require successful decode before rendering.
 
-**Default proposals (not approved)**: 30 seconds normal slideshow; 80% pause and 60% resume. This sample is for testing/feedback, not a claim of production defaults.
+**Load measurement**: One brief, bounded best-effort measurement per normal transition due-time; on real machines total GPU usage, WindowsEnv CPU usage. No history, expensive precision calibration, periodic monitor, or restart-only toggle. Invalid measurement is an explicit unknown/error rather than zero; failure policy and latency verified in Windows integration testing.
 
-**Security**: only parse local config files; do not execute expressions, shell commands, scripts or arbitrary YAML tags. Validate numeric limits and reject invalid paths without destructive side effects. Image file operations should be read-only.
+**Sign-in startup**: Controlled by a tray checkbox that *immediately* reads/writes the **current-user Windows Run registration**, not this YAML file. A registry write must be verified by read-back before UI checkmark changes.
+
+**Security**: Only local photo files; use typed YAML data without executable tags; validate Windows paths and intervals, do not write private paths to routine logs or upload user photos. Read-only photo access.
