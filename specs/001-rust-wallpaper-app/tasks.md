@@ -22,13 +22,13 @@
 
 **Purpose**: Create a separate Rust project, establish a reproducible Windows target and freeze legacy references without touching historical branches.
 
-- [ ] T001 Initialize the Rust Windows application/library skeleton at `rust/Cargo.toml`, `rust/src/main.rs`, `rust/src/lib.rs` and `rust/rust-toolchain.toml`, targeting `x86_64-pc-windows-msvc`; retain all C# files untouched.
+- [X] T001 Initialize the Rust Windows application/library skeleton at `rust/Cargo.toml`, `rust/src/main.rs`, `rust/src/lib.rs` and `rust/rust-toolchain.toml`, targeting `x86_64-pc-windows-msvc`; retain all C# files untouched.
 - [ ] T002 Declare and lock the audited `windows` crate Win32/D3D11/DXGI/WIC features and maintained Serde YAML, RNG and test dependencies in `rust/Cargo.toml` and `rust/Cargo.lock`, preserving the owner-approved Windows 11 baseline.
-- [ ] T003 [P] Add Windows Rust format, lint, build and test CI checks in `.github/workflows/rust-windows.yml`, working only under `rust/` and clearly separating hardware-only tests.
-- [ ] T004 [P] Update `.gitignore` for `rust/target/`, user YAML, image collections, screenshots and private Windows logs without ignoring tracked examples in `specs/001-rust-wallpaper-app/contracts/config.example.yaml`.
+- [X] T003 [P] Add Windows Rust format, lint, build and test CI checks in `.github/workflows/rust-windows.yml`, working only under `rust/` and clearly separating hardware-only tests.
+- [X] T004 [P] Update `.gitignore` for `rust/target/`, user YAML, image collections, screenshots and private Windows logs without ignoring tracked examples in `specs/001-rust-wallpaper-app/contracts/config.example.yaml`.
 - [ ] T005 [P] Extract immutable C# equation/geometry/phase constants and image-selection behavior from `master:YUAUY_Wallpaper/Form1.cs` and `master:YUAUY_Wallpaper/Image/ImagePicker.cs` into `rust/tests/fixtures/legacy_reference.json`, recording source revision and calculation assumptions in `specs/001-rust-wallpaper-app/reference-audit.md`; no easing substitutions.
 - [ ] T006 Record the actual WindowsEnv 25H2 build number, installed Rust/MSVC/SDK availability, D3D11/WARP readiness and GPU absence/presence in `specs/001-rust-wallpaper-app/evidence/windowsenv-baseline.md`; mark unsupported checks SKIPPED, not PASS.
-- [ ] T007 [P] Document Rust build/test commands and test-data privacy requirements for WindowsEnv in `rust/README.md`, linked to `specs/001-rust-wallpaper-app/quickstart.md` and the pinned toolchain.
+- [X] T007 [P] Document Rust build/test commands and test-data privacy requirements for WindowsEnv in `rust/README.md`, linked to `specs/001-rust-wallpaper-app/quickstart.md` and the pinned toolchain.
 
 **Checkpoint**: A reproducible Rust project is present, source reference vectors are frozen and WindowsEnv prerequisites are recorded. A successful native build is required before starting feature code.
 

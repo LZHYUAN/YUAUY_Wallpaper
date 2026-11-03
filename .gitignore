@@ -361,3 +361,21 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# Rust build products (Cargo.lock is an application source artifact: keep tracked)
+/rust/target/
+*.rs.bk
+*.rlib
+*.profraw
+*.profdata
+
+# Local Rust runtime configuration and private acceptance-test data
+/rust/*.yaml
+/rust/*.yml
+/rust/.env*
+/rust/photos/
+/rust/images/
+/rust/test-data/private/
+/rust/screenshots/
+/rust/private-logs/
+/specs/001-rust-wallpaper-app/evidence/private/

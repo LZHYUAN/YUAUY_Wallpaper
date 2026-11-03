@@ -1,0 +1,53 @@
+name: Rust Windows
+
+on:
+  push:
+    paths:
+      - 'rust/**'
+      - '.github/workflows/rust-windows.yml'
+      - 'specs/001-rust-wallpaper-app/contracts/**'
+  pull_request:
+    paths:
+      - 'rust/**'
+      - '.github/workflows/rust-windows.yml'
+      - 'specs/001-rust-wallpaper-app/contracts/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  rust-windows:
+    name: Format, lint, build and deterministic tests (MSVC x64)
+    runs-on: windows-2025
+    defaults:
+      run:
+        shell: pwsh
+        working-directory: rust
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install repository-pinned Rust toolchain
+        # rustup reads rust/rust-toolchain.toml, including fmt, clippy and target.
+        run: rustup show active-toolchain
+      - name: Require reviewed dependency lockfile
+        run: |
+          if (!(Test-Path Cargo.lock)) {
+            throw 'T002 blocked: generate and review rust/Cargo.lock before CI can pass.'
+          }
+      - name: Format
+        run: cargo fmt --all -- --check
+      - name: Lint
+        run: cargo clippy --locked --all-targets --target x86_64-pc-windows-msvc -- -D warnings
+      - name: Build release executable
+        run: cargo build --locked --release --target x86_64-pc-windows-msvc
+      - name: Deterministic tests (no desktop or hardware side effects)
+        run: cargo test --locked --target x86_64-pc-windows-msvc
+      - name: Record separate Windows acceptance gates
+        run: |
+          @'
+          CI checks compilation and non-interactive tests only.
+          Future desktop, registry, WARP and physical-GPU tests must be #[ignore]
+          with a reason and run explicitly on the appropriate authorized machine.
+          WindowsEnv WARP/WorkerW and physical GPU/multi-monitor acceptance remain
+          separate manual gates in specs/001-rust-wallpaper-app/quickstart.md.
+          '@ >> $env:GITHUB_STEP_SUMMARY

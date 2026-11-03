@@ -1,0 +1,47 @@
+[package]
+name = "yuauy-wallpaper"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.99.1"
+publish = false
+description = "Windows 11 wallpaper application (implementation scaffold)"
+
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "yuauy-wallpaper"
+path = "src/main.rs"
+
+[dependencies]
+serde = { version = "=1.0.229", features = ["derive"] }
+yaml_serde = "=0.10.7"
+rand = "=0.10.3"
+
+[dev-dependencies]
+# Rust's built-in test harness plus disposable, automatically cleaned fixtures.
+tempfile = "=3.27.0"
+
+[target.'cfg(windows)'.dependencies]
+# Enable only audited API families; no WinRT/GUI framework or alternate renderer.
+windows = { version = "=0.62.2", default-features = false, features = [
+    "std",
+    "Win32_Foundation",
+    "Win32_Graphics_Direct3D",
+    "Win32_Graphics_Direct3D_Fxc",
+    "Win32_Graphics_Direct3D11",
+    "Win32_Graphics_Dxgi",
+    "Win32_Graphics_Dxgi_Common",
+    "Win32_Graphics_Gdi",
+    "Win32_Graphics_Imaging",
+    "Win32_Security",
+    "Win32_System_Com",
+    "Win32_System_LibraryLoader",
+    "Win32_System_Performance",
+    "Win32_System_Registry",
+    "Win32_System_SystemInformation",
+    "Win32_System_Threading",
+    "Win32_UI_HiDpi",
+    "Win32_UI_Shell",
+    "Win32_UI_WindowsAndMessaging",
+] }
