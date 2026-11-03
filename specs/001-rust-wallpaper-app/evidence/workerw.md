@@ -17,7 +17,8 @@
 | CLI input safe default / explicit bounded attach / reject unsafe options | **PASS** | TDD: `cargo test --locked --test workerw_probe_contract --target x86_64-unknown-linux-gnu`, 3/3 passed after initial expected missing-module failure |
 | Windows x64 MSVC cross-build type check / Clippy | **PASS** | `cargo clippy --locked --all-targets --target x86_64-pc-windows-msvc -- -D warnings` |
 | Linux unit/integration suite | **PASS** | 7/7 passed |
-| Windows hosted CI release build and read-only probe | **PENDING** | New workflow step runs `probe_workerw.exe --inspect`; exit code 2 counts as SKIPPED in runner with no Explorer desktop |
+| Windows hosted CI release build | **PASS** | [CI run 41624317570](https://github.com/LZHYUAN/YUAUY_Wallpaper/actions/runs/41624317570), commit `8a45e4a`: MSVC release build and deterministic tests passed |
+| Windows hosted CI read-only WorkerW inspection | **SKIPPED (expected)** | Executed binary, but returned `SKIPPED: WorkerW child of Progman absent; no shell message sent` (worker not present on hosted runner) |
 | WindowsEnv 25H2 desktop layering | **SKIPPED** | No approved, non-focus-stealing native Windows CLI/SSH channel available yet; CUA UIA/graphics capture health is not a WorkerW application test |
 | WindowsEnv temporary child cleanup / Explorer restart recovery | **SKIPPED** | Requires WindowsEnv interactive acceptance; never assume success from CI |
 
@@ -39,3 +40,14 @@ While attaching, observe screenshot/window tree and prove this process-owned vis
 - [Windows 11 24H2 community analysis](https://github.com/lively-community/lively/issues/2074): Progman/SHELLDLL_DefView/WorkerW composition changed and a seemingly correct HWND parent does not prove visual rendering. Treat these community notes as hypotheses until WindowsEnv verification.
 
 **Next gate:** Acquire scoped WindowsEnv command execution or an explicitly authorized non-disruptive launch path, test the attached temporary control, then update this report and task checkbox only if all acceptance points pass.
+
+## GitHub CI execution details (2026-11-03)
+
+The [Windows workflow run 41624317570](https://github.com/LZHYUAN/YUAUY_Wallpaper/actions/runs/41624317570) completed successfully, including Windows release build, Windows Clippy and deterministic tests. Job `125877697232` emitted exactly:
+
+```text
+PASS driver_requested=warp feature_level=0xb000 present_hresult=0x00000000 occluded=false elapsed_ms=14 window_visible=false
+SKIPPED: WorkerW child of Progman absent; no shell message sent
+```
+
+The second line is **NOT** a WorkerW acceptance PASS. It means the read-only probe correctly refused attachment on a hosted Windows runner without a usable WorkerW. WindowsEnv 25H2's actual desktop remains the outstanding execution/visualization gate.
