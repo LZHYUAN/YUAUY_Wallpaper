@@ -41,3 +41,21 @@ When a trusted non-focus-stealing WindowsEnv PowerShell route exists, extract th
 ```
 
 The exact path depends on artifact extraction layout. Save the redacted console output, identify machine class **WindowsEnv** versus **GitHub hosted runner**, then run WorkerW visual `--attach-modern` separately only in a supervised test session. A probe that says SKIPPED does not count as PASS.
+
+## Hosted CI diagnostic bundle verification (2026-11-04)
+
+[GitHub Actions workflow 41681902301](https://github.com/LZHYUAN/YUAUY_Wallpaper/actions/runs/41681902301), job `126077454969`, source commit `1325ac5e2d0813ddfc6c35ef6dc289cdd6a3870d`, completed **SUCCESS** (format, Clippy, MSVC release build, WARP, VSync diagnostic, CPU/GPU diagnostic, WorkerW read-only inspection, bounded hidden Win32 message loop, inventory, artifact upload and all 50 Windows-target deterministic tests). Actual inventory script output was:
+
+```text
+BASELINE os_windows=True version=10.0.26100.0 architecture=X64 source=local_process
+TOOL rustc=True cargo=True cl_in_path=False link_in_path=True
+TOOL visual_studio_cpp_detected=True sdk_registry_key_present=True
+PROBE probe=probe_d3d11.exe status=PASS api_only=true
+PROBE probe=probe_workerw.exe status=SKIPPED api_only=true
+PROBE probe=probe_usage.exe status=PASS api_only=true
+VERDICT diagnostics_only=true desktop_layering=UNVERIFIED production_wallpaper=UNVERIFIED
+```
+
+**Environment distinction:** `10.0.26100.0` above is the **GitHub hosted Windows runner**, not the user's WindowsEnv CUA OS build `10.0.26200.9711`. The runner's `cl_in_path=False` does not mean the compiler is absent, since the separately detected Visual Studio C++ workload and Windows CI build succeeded. None of this establishes which tools are installed inside WindowsEnv.
+
+The Actions run uploaded one checked `yuauy-foundation-probes-windows-x64` artifact (artifact ID `13252888438`, size `348854` bytes, expiry `2026-11-06T17:13:50Z`; user download via the workflow run page). It contains the four probe executables and the read-only inventory script, **not** the product executable, personal images or configuration. The verified bundle can be transferred into WindowsEnv when a safe command/file route exists; it **has not** been executed on that target. T006, T008, T009, T010 and T019 therefore remain unchecked.

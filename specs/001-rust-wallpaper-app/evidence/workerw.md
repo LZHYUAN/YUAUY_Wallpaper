@@ -69,3 +69,13 @@ The initial WorkerW-only probe was insufficient to test Windows 11 24H2+ layerin
 5. RED observed when adding TDD tests for missing `AttachTarget`, `select_target`, and `Mode::AttachModern`. GREEN: both new policy tests pass (total 5/5), Windows-target Clippy passed; native `--attach-modern` is **NOT RUN** on CI or WindowsEnv without explicit interactive approval.
 
 T009 and Phase 2 T019 therefore remain unchecked. The new probe is an acceptance aid, not a new production desktop-host implementation or permission to change Explorer configuration.
+
+## Windows CI verification of raised-desktop strategy (2026-11-04)
+
+[GitHub Actions 41681681198](https://github.com/LZHYUAN/YUAUY_Wallpaper/actions/runs/41681681198), source commit `f3bf944b822292a948cd01610f5b1179c73e20f4`, completed **successfully**: Windows MSVC format, Clippy, release build and all **50 deterministic tests** passed, including the 5 WorkerW CLI/strategy safety tests. Windows-hosted `probe_workerw --inspect` returned:
+
+```text
+SKIPPED: WorkerW child of Progman absent; no shell message sent
+```
+
+The CI runner did not have an eligible desktop WorkerW. **Neither `--attach` nor `--attach-modern` was executed.** The modern path is confirmed to compile for Windows MSVC and its pure policy tests pass, but on-screen composition, icon occlusion and cleanup after *actual* attachment on WindowsEnv are still **UNVERIFIED**. T009 remains unchecked.
