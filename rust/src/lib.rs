@@ -4,4 +4,5 @@
 //! Animation, image selection, scheduling, and Windows adapters belong to later
 //! Spec Kit tasks. This setup scaffold performs no OS or photo operations.
 
+pub mod platform;
 pub mod workerw_probe_options;
