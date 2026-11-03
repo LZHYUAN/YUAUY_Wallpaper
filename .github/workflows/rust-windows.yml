@@ -56,6 +56,19 @@ jobs:
           } else {
             "Pacing Present(1) diagnostic ran on a hidden window. Real VSync and output rate still NOT verified." >> $env:GITHUB_STEP_SUMMARY
           }
+      - name: One-shot total CPU and GPU PDH diagnostics (hosted runner only)
+        continue-on-error: true
+        run: |
+          & .\target\x86_64-pc-windows-msvc\release\probe_usage.exe --metric cpu_total --budget-ms 400
+          if ($LASTEXITCODE -ne 0) {
+            "CPU total read: SKIPPED/FAIL; see logs. Never assume idle CPU." >> $env:GITHUB_STEP_SUMMARY
+          }
+          & .\target\x86_64-pc-windows-msvc\release\probe_usage.exe --metric gpu_total --budget-ms 400
+          if ($LASTEXITCODE -ne 0) {
+            "GPU Engine PDH read: SKIPPED/FAIL; no substitution of zero usage." >> $env:GITHUB_STEP_SUMMARY
+          } else {
+            "GPU Engine PDH short-sample result is provisional, NOT production-approved." >> $env:GITHUB_STEP_SUMMARY
+          }
       - name: WorkerW topology read-only smoke (GitHub runner only)
         run: |
           & .\target\x86_64-pc-windows-msvc\release\probe_workerw.exe --inspect

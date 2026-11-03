@@ -9,4 +9,5 @@ pub mod error;
 pub mod monitor;
 pub mod pacing;
 pub mod platform;
+pub mod usage_probe;
 pub mod workerw_probe_options;
