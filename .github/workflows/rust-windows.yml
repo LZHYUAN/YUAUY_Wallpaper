@@ -47,6 +47,17 @@ jobs:
           if ($LASTEXITCODE -ne 0) {
             throw 'WARP smoke failed on this GitHub Actions runner (not WindowsEnv).'
           }
+      - name: WorkerW topology read-only smoke (GitHub runner only)
+        run: |
+          & .\target\x86_64-pc-windows-msvc\release\probe_workerw.exe --inspect
+          if ($LASTEXITCODE -eq 2) {
+            "WorkerW topology SKIPPED: no supported interactive Explorer desktop on this CI runner." >> $env:GITHUB_STEP_SUMMARY
+            exit 0
+          }
+          if ($LASTEXITCODE -ne 0) {
+            throw 'WorkerW read-only probe had an unexpected failure.'
+          }
+          "WorkerW discovery completed; behind-icon visibility remains unverified." >> $env:GITHUB_STEP_SUMMARY
       - name: Deterministic tests (no desktop or hardware side effects)
         run: cargo test --locked --target x86_64-pc-windows-msvc
       - name: Record separate Windows acceptance gates
