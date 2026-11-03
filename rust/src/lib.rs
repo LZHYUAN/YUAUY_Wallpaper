@@ -6,5 +6,6 @@
 
 pub mod diagnostics;
 pub mod error;
+pub mod monitor;
 pub mod platform;
 pub mod workerw_probe_options;
