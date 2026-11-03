@@ -24,3 +24,11 @@
 - Do not create a shortcut, change OS security policy, reboot or infer installed tools from filenames. Once a verified non-disruptive terminal/SSH path exists, run `Get-ComputerInfo`, `rustc --version`, `cargo --version`, `where.exe cl`, `where.exe link`, SDK discovery and video-adapter enumeration, then execute the D3D11/WARP probe.
 
 **Verdict:** Win32 remote desktop connectivity and D3D11 capture-driver health are proven; WindowsEnv toolchain availability, app WARP Present and WorkerW layering remain **unverified**, not **PASS**. The user-approved original C# formula and old branches have not been modified.
+
+## Live recheck — 2026-11-04 (Hermes CUA, read-only)
+
+The `mcp__win_cua__health_report` again returned an active Windows x86_64 session on OS build **10.0.26200.9711** with `ax_capability: pass` and `screen_capture_capability: pass`. A read-only `mcp__win_cua__list_windows` call listed **5 top-level windows**, including **Explorer's Program Manager**; this proves a shell UI exists but does **not** establish a usable nested WorkerW, correct Z-order or desktop-icon layering. No GUI input was issued.
+
+The Hermes Linux SSH configuration contains no WindowsEnv alias and `getent hosts windowsenv` returned no address; an approved, non-focus-stealing Windows command path is still **not available**. An absent SSH alias is not evidence that the Windows machine is powered down. No PowerShell launch or focus-stealing retry was attempted in this recheck.
+
+For future acceptance without requiring Rust/MSVC on WindowsEnv, the dedicated GitHub Windows CI workflow can upload a 3-day **diagnostics-only** probe artifact and the read-only `rust/scripts/foundation-inventory.ps1`. That artifact is evidence of **hosted CI build**, not WindowsEnv installation or execution. The actual WindowsEnv Rust/MSVC/SDK inventory, app WARP Present, WorkerW visual proof and physical GPU presence all remain explicitly **SKIPPED/UNVERIFIED**.
