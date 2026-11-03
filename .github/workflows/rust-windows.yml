@@ -80,6 +80,13 @@ jobs:
             throw 'WorkerW read-only probe had an unexpected failure.'
           }
           "WorkerW discovery completed; behind-icon visibility remains unverified." >> $env:GITHUB_STEP_SUMMARY
+      - name: Bounded hidden Win32 message loop smoke (hosted runner only)
+        timeout-minutes: 1
+        run: |
+          & .\target\x86_64-pc-windows-msvc\release\yuauy-wallpaper.exe --shell-smoke
+          if ($LASTEXITCODE -ne 0) {
+            throw 'Hidden Win32 smoke failed to create, tick, or destroy its own HWND.'
+          }
       - name: Deterministic tests (no desktop or hardware side effects)
         run: cargo test --locked --target x86_64-pc-windows-msvc
       - name: Record separate Windows acceptance gates

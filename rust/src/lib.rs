@@ -11,5 +11,6 @@ pub mod monitor;
 pub mod pacing;
 pub mod platform;
 pub mod render;
+pub mod shell;
 pub mod usage_probe;
 pub mod workerw_probe_options;
