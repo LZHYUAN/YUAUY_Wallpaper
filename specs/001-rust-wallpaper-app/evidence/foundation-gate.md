@@ -9,7 +9,7 @@ The following measurements distinguish *hosted Windows CI*, *Hermes Linux cross-
 | Git `rust_build`, independent C# reference, project toolchain | `rust/Cargo.lock`, `legacy_reference.json`, source SHA audit, GitHub actions | **PASS** |
 | Windows x64 MSVC Release compilation | [GitHub Actions 41679718337](https://github.com/LZHYUAN/YUAUY_Wallpaper/actions/runs/41679718337) and earlier completed runs | **PASS** for tested commits |
 | WARP D3D11 device, clear and Present(0) | `evidence/d3d11-warp.md`; hosted Windows runner real HRESULT 0x0 | **PASS on hosted CI only** |
-| Win32 WorkerW topology and reversible visual behind-icon composition | `evidence/workerw.md`; hosted CI returned SKIPPED because child WorkerW absent | **NOT PROVEN**; WindowsEnv visual acceptance outstanding |
+| Win32 WorkerW topology and reversible visual behind-icon composition | `evidence/workerw.md`; hosted CI returned SKIPPED because WorkerW absent; explicit legacy/raised-desktop reversible probes and 5 contract tests now available | **NOT PROVEN**; WindowsEnv visual acceptance outstanding |
 | Present(1), `max_fps` software limiter, 60/120/144/240 Hz matrix | `evidence/vsync-probe.md`; CI 64Hz hidden-window 12 real Present calls; unsupported test modes listed | **DIAGNOSTIC only**, actual VSync and hardware modes SKIPPED |
 | Whole-system GPU/CPU quick bounded API | `evidence/load-probe.md`; hosted CI CPU 4%/200 ms, GPU PDH skipped at 310 ms before collect | **CPU probe PASS; GPU Unknown**, production guard NOT approved |
 | Monotonic clock, error handling, monitor geometry, renderer contract, app state, test doubles | T012–T017 tests and evidence | **PASS as testable interfaces** |
@@ -25,3 +25,5 @@ The following measurements distinguish *hosted Windows CI*, *Hermes Linux cross-
 - On an authorized non-disruptive WindowsEnv command channel: check OS/SDK/MSVC/Rust and active display modes; run `probe_d3d11 --warp` and `probe_workerw --inspect`; perform the **bounded** WorkerW attach visual inspection, prove cleanup, and record both console output and screenshot metadata. Exercise shell's bounded smoke, then assess T010, T011 with available display/GPU/CPU. Only then update T006/T008/T009/T010/T018/T019 checkboxes based on observed criteria.
 
 No untouched C# branch was modified, no real user photo paths were used, and unrelated `.specify` or `.agents` local work has not been committed.
+
+**2026-11-04:** T009 probing strategy now distinguishes `WS_EX_NOREDIRECTIONBITMAP` raised desktops from legacy WorkerW hosting. The modern test is explicitly opt-in, bounded and restores its own HWND; the actual 25H2 desktop validation gate remains BLOCKED.
