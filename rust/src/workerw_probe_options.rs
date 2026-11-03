@@ -31,6 +31,34 @@ pub fn select_target(
     }
 }
 
+/// A read-only snapshot of required shell-host relationships. The WorkerW
+/// child may be absent on Windows 11 25H2 raised desktops even if independent
+/// top-level WorkerW windows exist; modern Progman hosting must not depend on it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct DesktopTopology {
+    pub has_progman: bool,
+    pub has_defview_child: bool,
+    pub has_workerw_child: bool,
+    pub raised_desktop: bool,
+    pub same_icon_owner: bool,
+}
+
+pub fn select_target_for_topology(
+    mode: Mode,
+    topology: DesktopTopology,
+) -> Result<Option<AttachTarget>, &'static str> {
+    if !topology.has_progman || !topology.has_defview_child || !topology.same_icon_owner {
+        return Err(
+            "Progman and its SHELLDLL_DefView icon child must belong to the same shell owner",
+        );
+    }
+    let target = select_target(mode, topology.raised_desktop)?;
+    if target == Some(AttachTarget::WorkerW) && !topology.has_workerw_child {
+        return Err("legacy desktop requires a direct WorkerW child of Progman");
+    }
+    Ok(target)
+}
+
 /// A bounded opt-in. Never sends undocumented Progman messages or changes
 /// Explorer window styles or process state.
 pub fn parse_args<I, S>(args: I) -> Result<Mode, &'static str>

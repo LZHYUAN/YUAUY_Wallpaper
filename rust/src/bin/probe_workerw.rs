@@ -59,7 +59,9 @@ mod win {
         },
         core::w,
     };
-    use yuauy_wallpaper::workerw_probe_options::{AttachTarget, Mode, select_target};
+    use yuauy_wallpaper::workerw_probe_options::{
+        AttachTarget, DesktopTopology, Mode, select_target_for_topology,
+    };
 
     pub(super) enum ProbeError {
         Skip(&'static str),
@@ -93,57 +95,64 @@ mod win {
         // SAFETY: Win32 read-only lookup; None means any window title.
         let progman = unsafe { FindWindowW(w!("Progman"), None) }
             .map_err(|_| ProbeError::Skip("Progman absent; no shell desktop to inspect"))?;
-        // On >=24H2 both are expected direct children; never guess a parent.
-        let worker =
-            unsafe { FindWindowExW(Some(progman), None, w!("WorkerW"), None) }.map_err(|_| {
-                ProbeError::Skip("WorkerW child of Progman absent; no shell message sent")
-            })?;
+        // Windows 11 25H2 raised desktops may have top-level WorkerW HWNDs,
+        // rather than a WorkerW directly under Progman. A modern layered
+        // Progman child requires the icon view, NOT a direct WorkerW child.
+        let worker_child = unsafe { FindWindowExW(Some(progman), None, w!("WorkerW"), None) }.ok();
         let defview = unsafe { FindWindowExW(Some(progman), None, w!("SHELLDLL_DefView"), None) }
-            .map_err(|_| {
-            ProbeError::Skip("SHELLDLL_DefView not a Progman child (topology unsupported)")
-        })?;
-
-        // SAFETY: these read-only queries do not mutate the desktop or z-order.
-        if unsafe { GetParent(worker)? } != progman || unsafe { GetParent(defview)? } != progman {
-            return Err(ProbeError::Skip(
-                "WorkerW/DefView parent changed while inspecting",
-            ));
+            .map_err(|_| ProbeError::Skip("SHELLDLL_DefView not a Progman child"))?;
+        if unsafe { GetParent(defview)? } != progman {
+            return Err(ProbeError::Skip("icon view parent changed during lookup"));
         }
         let owner_pid = process_id(progman);
-        if owner_pid == 0 || process_id(worker) != owner_pid || process_id(defview) != owner_pid {
-            return Err(ProbeError::Skip(
-                "desktop window owners differ; refusing attach",
-            ));
-        }
-        let mut rect = Default::default();
-        unsafe { GetWindowRect(worker, &mut rect)? };
-        let width = rect.right - rect.left;
-        let height = rect.bottom - rect.top;
-        let worker_visible = unsafe { IsWindowVisible(worker).as_bool() };
+        let same_icon_owner = owner_pid != 0 && process_id(defview) == owner_pid;
         let raised_desktop_hint = (unsafe { GetWindowLongW(progman, GWL_EXSTYLE) } as u32
             & WS_EX_NOREDIRECTIONBITMAP.0)
             != 0;
+        let topology = DesktopTopology {
+            has_progman: true,
+            has_defview_child: true,
+            has_workerw_child: worker_child.is_some(),
+            raised_desktop: raised_desktop_hint,
+            same_icon_owner,
+        };
+        let target = select_target_for_topology(mode, topology).map_err(ProbeError::Skip)?;
+        if target == Some(AttachTarget::WorkerW) {
+            let worker = worker_child.ok_or(ProbeError::Skip("WorkerW child missing"))?;
+            if unsafe { GetParent(worker)? } != progman || process_id(worker) != owner_pid {
+                return Err(ProbeError::Skip("legacy WorkerW owner or parent mismatch"));
+            }
+        }
+        let geometry_host = if target == Some(AttachTarget::WorkerW) {
+            worker_child.ok_or(ProbeError::Skip("WorkerW child missing"))?
+        } else {
+            progman
+        };
+        let mut rect = Default::default();
+        unsafe { GetWindowRect(geometry_host, &mut rect)? };
+        let width = rect.right - rect.left;
+        let height = rect.bottom - rect.top;
+        let worker_visible = worker_child
+            .map(|worker| unsafe { IsWindowVisible(worker).as_bool() })
+            .unwrap_or(false);
         println!(
-            "INSPECT progman_child_workerw=true progman_child_defview=true same_owner=true worker_rect={width}x{height} worker_visible={worker_visible} progman_no_redirection={raised_desktop_hint} attach_requested={} behind_icons=UNVERIFIED",
+            "INSPECT progman_child_workerw={} progman_child_defview=true same_owner={same_icon_owner} host_rect={width}x{height} worker_child_visible={worker_visible} progman_no_redirection={raised_desktop_hint} attach_requested={} behind_icons=UNVERIFIED",
+            worker_child.is_some(),
             !matches!(mode, Mode::Inspect)
         );
-
-        let target = select_target(mode, raised_desktop_hint).map_err(ProbeError::Skip)?;
         if let Some(target) = target {
             let duration_ms = match mode {
                 Mode::Attach { duration_ms } | Mode::AttachModern { duration_ms } => duration_ms,
-                Mode::Inspect => unreachable!("select_target(Inspect) returns None"),
+                Mode::Inspect => unreachable!("target(Inspect) is None"),
             };
             if width < 128 || height < 72 {
-                return Err(ProbeError::Skip(
-                    "desktop host dimensions unsuitable for bounded child probe",
-                ));
+                return Err(ProbeError::Skip("desktop host dimensions unsuitable"));
             }
             // Only the probe-owned HWND is created and moved. No shell window
             // receives SetParent, SetWindowPos, SetWindowLong, or 0x052C.
             let (host, class, label, ex_style, strategy) = match target {
                 AttachTarget::WorkerW => (
-                    worker,
+                    worker_child.ok_or(ProbeError::Skip("WorkerW child missing"))?,
                     w!("BUTTON"),
                     w!("YUAUY legacy WorkerW probe"),
                     WINDOW_EX_STYLE(WS_EX_NOACTIVATE.0 | WS_EX_TRANSPARENT.0),
