@@ -192,8 +192,8 @@ mod probe {
                 CreateWindowExW, DestroyWindow, DispatchMessageW, FindWindowExW, FindWindowW,
                 GW_HWNDNEXT, GW_HWNDPREV, GWL_EXSTYLE, GetLayeredWindowAttributes, GetParent,
                 GetShellWindow, GetWindow, GetWindowLongW, GetWindowRect, GetWindowThreadProcessId,
-                HWND_TOP, IsWindow, IsWindowVisible, LAYERED_WINDOW_ATTRIBUTES_FLAGS, LWA_ALPHA,
-                MSG, PM_REMOVE, PeekMessageW, SWP_NOACTIVATE, SWP_SHOWWINDOW,
+                HWND_BOTTOM, HWND_TOP, IsWindow, IsWindowVisible, LAYERED_WINDOW_ATTRIBUTES_FLAGS,
+                LWA_ALPHA, MSG, PM_REMOVE, PeekMessageW, SWP_NOACTIVATE, SWP_SHOWWINDOW,
                 SetLayeredWindowAttributes, SetWindowPos, TranslateMessage, WS_CHILD,
                 WS_CLIPSIBLINGS, WS_DISABLED, WS_EX_LAYERED, WS_EX_NOACTIVATE,
                 WS_EX_NOREDIRECTIONBITMAP, WS_EX_TOOLWINDOW, WS_EX_TRANSPARENT, WS_POPUP,
@@ -350,12 +350,8 @@ mod probe {
         let (start, target) = match layer {
             ZLayer::BelowDefView => (defview, hwnd),
             ZLayer::AboveDefView => (hwnd, defview),
-            ZLayer::TopLevelBelowProgman => {
-                return unsafe { GetWindow(defview, GW_HWNDNEXT) }.ok() == Some(hwnd);
-            }
-            ZLayer::TopLevelAboveProgman => {
-                return unsafe { GetWindow(hwnd, GW_HWNDNEXT) }.ok() == Some(defview);
-            }
+            ZLayer::TopLevelBelowProgman => (defview, hwnd),
+            ZLayer::TopLevelAboveProgman => (hwnd, defview),
         };
         let mut current = start;
         for _ in 0..128 {
@@ -573,7 +569,9 @@ mod probe {
         let insert_after = match layer {
             ZLayer::BelowDefView => host.defview,
             ZLayer::AboveDefView => HWND_TOP,
-            ZLayer::TopLevelBelowProgman => host.progman,
+            // Use the documented global bottom anchor rather than relying on
+            // shell HWND-relative insertion, which WindowsEnv normalized above Progman.
+            ZLayer::TopLevelBelowProgman => HWND_BOTTOM,
             ZLayer::TopLevelAboveProgman => {
                 unsafe { GetWindow(host.progman, GW_HWNDPREV) }.unwrap_or(HWND_TOP)
             }
