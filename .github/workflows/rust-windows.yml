@@ -102,6 +102,16 @@ jobs:
           }
           if ($LASTEXITCODE -ne 0) { throw 'Read-only D3D11 desktop probe failed' }
           "D3D11 read-only topology valid; visual attachment NOT executed in hosted CI." >> $env:GITHUB_STEP_SUMMARY
+      - name: Windows compatibility manifest and layered-child creation smoke
+        continue-on-error: true
+        run: |
+          $lines = @(& .\target\x86_64-pc-windows-msvc\release\probe_win32_window.exe)
+          $lines | Write-Output
+          if ($LASTEXITCODE -ne 0) { throw 'Win32 child-window diagnostic crashed' }
+          if ($lines -match 'PROGMAN_EXISTS=true' -and
+              $lines -notmatch 'CASE=layered_child PASS') {
+            throw 'Layered child creation failed: check embedded Win8+/Windows11 manifest.'
+          }
       - name: Upload foundation probes for explicit WindowsEnv acceptance (NOT a production release)
         uses: actions/upload-artifact@v4
         with:

@@ -36,3 +36,22 @@ Progman has NO direct WorkerW child.
 - CI runs `--inspect` only (no visible desktop mutation). Native WindowsEnv execution and icon-occlusion screenshot remain PENDING until the compiled binary is available from CI.
 
 Task gates remain separate. T008's WARP hidden-swapchain feasibility is now verified specifically on WindowsEnv, but actual icon-behind D3D11 acceptance is still to be determined.
+
+## Failed layered child creation and manifest root-cause investigation (2026-11-04)
+
+A visual run of `probe_desktop_d3d11.exe --attach-modern --duration-ms 10000` on **WindowsEnv 25H2** returned `FAIL CreateWindowExW HRESULT=0x00000000`. The 220×190 test region in its CUA desktop screenshot was pixel-identical to its baseline (0 changed pixels), and no Direct3D11 Present call was reached. The failure is **not** evidence that Direct3D11 desktop rendering is inherently impossible.
+
+A follow-up independent Rust Win32 test binary `probe_win32_window.exe`, source commit `21538b1`, reported on the SAME WindowsEnv:
+
+```text
+PROGMAN_EXISTS=true
+CASE=own_top_level PASS valid=true last_error=0
+CASE=simple_child PASS valid=true last_error=0
+CASE=layered_child FAIL hresult=0x80070057 last_error=87
+```
+
+A separate read-only/reversible PowerShell C# P/Invoke diagnostic created/destroyed its own 220×190 `WS_EX_LAYERED` child under Progman with identical `WS_CHILD|WS_CLIPSIBLINGS|WS_DISABLED` and `WS_EX_LAYERED|WS_EX_TRANSPARENT|WS_EX_NOACTIVATE` flags, returning successful HWND and Win32 error 0. This **isolates a Rust EXE compatibility-context difference** rather than a blanket Win32 prohibition. An additional C# control test returned `alpha=True pos=True below=True FILL=1`, then `CLEANUP requested` for its temporary child; the captured screen did not conclusively show the marker, so icon-behind visibility remains unverified.
+
+**Root-cause hypothesis grounded in Microsoft docs:** [Microsoft Using Windows](https://learn.microsoft.com/en-us/windows/win32/winmsg/using-windows) states that `WS_EX_LAYERED` child windows require a Windows 8-aware **application manifest**. [Microsoft Application (executable) manifest](https://learn.microsoft.com/en-us/windows/compatibility/application-executable-manifest) documents that an unmanifested EXE receives legacy Windows Vista compatibility behavior even on newer OS versions. The Rust crate did not embed a supportedOS manifest, unlike PowerShell/.NET.
+
+Added `rust/assets/windows-app.manifest` with official Windows 8, 8.1 and Windows 10/11 supportedOS GUIDs and `asInvoker/uiAccess=false`; `rust/build.rs` passes `/MANIFEST:EMBED` and `/MANIFESTINPUT` to MSVC LINK for every Windows binary. This requires a **new Windows MSVC build and actual WindowsEnv retest**, including visual evidence; do not mark T009/T019 complete based on compilation alone.

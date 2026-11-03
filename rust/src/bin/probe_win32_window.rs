@@ -25,6 +25,42 @@ fn main() {
         ("own_top_level", WS_POPUP, WINDOW_EX_STYLE(0), None),
         ("simple_child", WS_CHILD, WINDOW_EX_STYLE(0), Some(progman)),
         (
+            "layered_only",
+            WS_CHILD,
+            WINDOW_EX_STYLE(WS_EX_LAYERED.0),
+            Some(progman),
+        ),
+        (
+            "transparent_only",
+            WS_CHILD,
+            WINDOW_EX_STYLE(WS_EX_TRANSPARENT.0),
+            Some(progman),
+        ),
+        (
+            "noactivate_only",
+            WS_CHILD,
+            WINDOW_EX_STYLE(WS_EX_NOACTIVATE.0),
+            Some(progman),
+        ),
+        (
+            "layered_and_transparent",
+            WS_CHILD,
+            WINDOW_EX_STYLE(WS_EX_LAYERED.0 | WS_EX_TRANSPARENT.0),
+            Some(progman),
+        ),
+        (
+            "layered_and_noactivate",
+            WS_CHILD,
+            WINDOW_EX_STYLE(WS_EX_LAYERED.0 | WS_EX_NOACTIVATE.0),
+            Some(progman),
+        ),
+        (
+            "layered_child_no_disabled",
+            WS_CHILD,
+            WINDOW_EX_STYLE(WS_EX_LAYERED.0 | WS_EX_NOACTIVATE.0 | WS_EX_TRANSPARENT.0),
+            Some(progman),
+        ),
+        (
             "layered_child",
             WS_CHILD | WS_CLIPSIBLINGS | WS_DISABLED,
             xstyle,
