@@ -13,7 +13,7 @@ The following measurements distinguish *hosted Windows CI*, *Hermes Linux cross-
 | Present(1), `max_fps` software limiter, 60/120/144/240 Hz matrix | `evidence/vsync-probe.md`; CI 64Hz hidden-window 12 real Present calls; unsupported test modes listed | **DIAGNOSTIC only**, actual VSync and hardware modes SKIPPED |
 | Whole-system GPU/CPU quick bounded API | `evidence/load-probe.md`; hosted CI CPU 4%/200 ms, GPU PDH skipped at 310 ms before collect | **CPU probe PASS; GPU Unknown**, production guard NOT approved |
 | Monotonic clock, error handling, monitor geometry, renderer contract, app state, test doubles | T012–T017 tests and evidence | **PASS as testable interfaces** |
-| Hidden Win32 native message loop, bounded owned HWND and shutdown | `evidence/shell-loop.md`; platform-free tests and Windows compilation pass | **Hosted CI runtime pending**; no Explorer side effect expected |
+| Hidden Win32 native message loop, bounded owned HWND and shutdown | `evidence/shell-loop.md`; [hosted Windows CI 41680522990](https://github.com/LZHYUAN/YUAUY_Wallpaper/actions/runs/41680522990) emitted `PASS shell_message_loop=true timer_fired=true state_stopped=true hwnd_destroyed=true` | **PASS for hidden-window skeleton on hosted CI**; WindowsEnv actual Explorer integration pending |
 | Actual WindowsEnv x64 Rust/MSVC/SDK inventory | `evidence/windowsenv-baseline.md`; CUA driver health and Windows build 26200.9711 verified | **PARTIAL**; no non-disruptive terminal channel to query toolchain |
 | Physical GPU, multiple monitors, high refresh | User-approved separate real-PC acceptance | **SKIPPED** |
 
