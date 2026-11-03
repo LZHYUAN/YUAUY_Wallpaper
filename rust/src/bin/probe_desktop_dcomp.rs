@@ -373,21 +373,23 @@ mod probe {
     fn validate_owned(hwnd: HWND, host: &Host, layer: ZLayer) -> Result<(), Outcome> {
         let top_level = layer.is_top_level();
         let expected_parent = if top_level { None } else { Some(host.progman) };
-        if unsafe { GetParent(hwnd) }.ok() != expected_parent
-            || !expected_relative_order(
-                hwnd,
-                if top_level {
-                    host.progman
-                } else {
-                    host.defview
-                },
-                layer,
-            )
-            || !unsafe { IsWindowVisible(hwnd).as_bool() }
-        {
+        let actual_parent = unsafe { GetParent(hwnd) }.ok();
+        let anchor = if top_level {
+            host.progman
+        } else {
+            host.defview
+        };
+        let parent_ok = actual_parent == expected_parent;
+        let order_ok = expected_relative_order(hwnd, anchor, layer);
+        let visible = unsafe { IsWindowVisible(hwnd).as_bool() };
+        if !parent_ok || !order_ok || !visible {
             return Err(Outcome::Fail(format!(
-                "owned_window_parent_zorder_or_visibility_changed placement={}",
-                layer.name()
+                "owned_window_parent_zorder_or_visibility_changed placement={} parent_ok={parent_ok} order_ok={order_ok} visible={visible} actual_parent={actual_parent:?} expected_parent={expected_parent:?} own_prev={:?} own_next={:?} anchor_prev={:?} anchor_next={:?}",
+                layer.name(),
+                unsafe { GetWindow(hwnd, GW_HWNDPREV) }.ok(),
+                unsafe { GetWindow(hwnd, GW_HWNDNEXT) }.ok(),
+                unsafe { GetWindow(anchor, GW_HWNDPREV) }.ok(),
+                unsafe { GetWindow(anchor, GW_HWNDNEXT) }.ok()
             )));
         }
         Ok(())
