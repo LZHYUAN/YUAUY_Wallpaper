@@ -25,7 +25,9 @@ which version is authoritative. The C# reference and `directx_build` branch MUST
 The new product MUST be implemented in Rust, targeting Windows 11 24H2 and newer. Rendering
 SHOULD use Direct3D 11 unless evidence and an explicit approved specification justify a
 change. While an animation is active, presentation MUST target the current display
-refresh rate using vertical synchronization instead of an old fixed 40 ms frame step.
+refresh rate using vertical synchronization AND a user-editable YAML `max_fps` cap
+(default 120), instead of an old fixed 40 ms frame step. Active frame rate MUST
+not exceed the lower of actual display refresh and configured max_fps.
 Animation progress MUST be based on elapsed time and preserve the validated original
 curves and transition time scale, independent of 60/120/144 Hz displays; idle MUST NOT
 render continuously. Windows shell/WorkerW integration, monitor enumeration, DPI/scaling, resource
@@ -38,8 +40,9 @@ NOT supersede behavior established by `master`.
 The shipped product MUST operate as a complete Windows wallpaper application with a system
 tray control surface and YAML configuration file. Normal slideshow timing MUST default
 to 30 seconds and a SINGLE system-wide GPU utilization threshold MUST default to 60%;
-both MUST be adjustable in YAML. The load guard MUST NOT introduce a separate recovery
-threshold or hysteresis. The tray MUST offer an immediate enable/disable toggle for
+both MUST be adjustable in YAML. Animation frame pacing MUST expose the adjustable
+positive integer YAML `max_fps` with default 120. The load guard MUST NOT introduce a
+separate recovery threshold or hysteresis. The tray MUST offer an immediate enable/disable toggle for
 current-user Windows sign-in autostart, write the actual OS registration on click, and
 read it back before showing success. The Windows registration, not YAML, is authoritative
 for autostart. Configuration MUST be validated before
@@ -128,4 +131,4 @@ MAJOR for incompatible removal/redefinition of principles, MINOR for adding or m
 expanding principles, PATCH for non-semantic clarification. Before implementation/PR review,
 check compliance with all five principles; record any exception and its explicit approval.
 
-**Version**: 2.3.0 | **Ratified**: 2026-10-31 | **Last Amended**: 2026-11-03
+**Version**: 2.4.0 | **Ratified**: 2026-10-31 | **Last Amended**: 2026-11-03

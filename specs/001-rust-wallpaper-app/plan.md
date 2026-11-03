@@ -2,13 +2,13 @@
 
 **Branch**: `rust_build` | **Date**: 2026-11-03 | **Spec**: [spec.md](spec.md)
 
-**Input**: `spec.md` (FR-001～FR-029), [Constitution v2.3.0](../../.specify/memory/constitution.md), [舊版行為稽核](reference-audit.md).
+**Input**: `spec.md` (FR-001～FR-030), [Constitution v2.4.0](../../.specify/memory/constitution.md), [舊版行為稽核](reference-audit.md).
 
 **Phase**: Spec Kit `$speckit-plan` / implementation design; **no Rust implementation or Windows integration tests have been run yet**. This document is an implementation proposal, not a release certificate.
 
 ## Summary
 
-Create an independent Windows 11 desktop wallpaper executable in Rust using Direct3D 11. Preserve the latest common C# animation math, monitor-area-weighted slideshow selection, and selection/placement rules. Replace the legacy accelerated startup with the owner-approved per-monitor composition: one center image followed by ten staggered overlapping slides behind it. A shared shuffle-without-replacement image queue handles every monitor and the startup; it rescans only on cycle rollover, explicit YAML reload, or a scheduled empty-state retry. The tray controls settings and status plus an immediate current-user Windows sign-in autostart toggle. The normal slideshow defaults to 30 seconds, adjustable in YAML; a single configurable 60% total GPU load threshold is checked only with a quick bounded due-time measurement (CPU test equivalent in WindowsEnv), with no hysteresis. Active animations target the display refresh rate using VSync while preserving the original elapsed-time animation formulas and duration. First startup bypasses the load guard. On the GPU-less WindowsEnv, use a software rendering path and test the resource gate with CPU input.
+Create an independent Windows 11 desktop wallpaper executable in Rust using Direct3D 11. Preserve the latest common C# animation math, monitor-area-weighted slideshow selection, and selection/placement rules. Replace the legacy accelerated startup with the owner-approved per-monitor composition: one center image followed by ten staggered overlapping slides behind it. A shared shuffle-without-replacement image queue handles every monitor and the startup; it rescans only on cycle rollover, explicit YAML reload, or a scheduled empty-state retry. The tray controls settings and status plus an immediate current-user Windows sign-in autostart toggle. The normal slideshow defaults to 30 seconds, adjustable in YAML; a single configurable 60% total GPU load threshold is checked only with a quick bounded due-time measurement (CPU test equivalent in WindowsEnv), with no hysteresis. Active animations use VSync plus a YAML-adjustable `max_fps` cap (default 120) so their presentation rate targets `min(display_refresh_rate, max_fps)` while preserving original elapsed-time animation formulas and duration. First startup bypasses the load guard. On the GPU-less WindowsEnv, use a software rendering path and test the resource gate with CPU input.
 
 ## Technical Context
 
@@ -24,9 +24,9 @@ Create an independent Windows 11 desktop wallpaper executable in Rust using Dire
 
 **Project Type**: Local Windows desktop / system-tray application with wallpaper rendering, no external service.
 
-**Performance Goals**: Normal idle: zero new-frame render calls, zero utilization samples and zero directory scans except the configured due-time empty-state check. **During animation, target each display's current refresh rate and vertical synchronization**, usually DXGI `Present(1,0)`; no fixed 40ms frame interval or 60FPS cap. Compute progress from monotonic elapsed time against the historical C# transition time scale and **preserve all original phase/math functions**. At 60/120/144Hz do not shorten the animation due to higher frame count. When idle, do not keep the render loop alive. Hardware limitations (WARP, multiple refresh rates, DWM) must be measured and recorded, not claimed as guaranteed FPS.
+**Performance Goals**: Normal idle: zero new-frame render calls, zero utilization samples and zero directory scans except the configured due-time empty-state check. **During animation, use vertical synchronization plus the user-configurable `max_fps` cap (default 120)**, targeting `min(monitor_refresh_hz, max_fps)` and generally using DXGI `Present(1,0)` on eligible frames. When `max_fps` is below refresh, schedule/skip unneeded frame production before rendering; VSync alone is insufficient to enforce a lower FPS cap. No fixed 40ms frame interval or busy-wait loop. Compute progress from monotonic elapsed time against the historical C# transition time scale and **preserve all original phase/math functions**. At 60/120/144Hz do not shorten the animation due to higher frame count. When idle, do not keep the render loop alive. Hardware limitations (WARP, multiple refresh rates, DWM) must be measured and recorded, not claimed as guaranteed FPS.
 
-**Constraints**: Single global shuffled image queue; shared monitors use it sequentially; hard separation between startup choreography and ordinary animation math; do not change `master` or `directx_build`; do not write a polling process or monitoring thread. Single adjustable load threshold (default 60%, high is >=, normal is <); no independent recovery value, no hysteresis or lengthy calibration. Windows sign-in autostart registration is user-scoped, updated immediately on tray interaction and never silently written when the feature is merely documented. Only call Windows APIs on intended Windows threads, serialize render/context ownership, handle loss of desktop shell and display reconfiguration. No images means no image rendering, but tray and event loop remain active.
+**Constraints**: Single global shuffled image queue; shared monitors use it sequentially; hard separation between startup choreography and ordinary animation math; do not change `master` or `directx_build`; do not write a polling process or monitoring thread. Single adjustable load threshold (default 60%, high is >=, normal is <) and positive YAML max_fps (default 120); no independent recovery value, no hysteresis or lengthy calibration. Windows sign-in autostart registration is user-scoped, updated immediately on tray interaction and never silently written when the feature is merely documented. Only call Windows APIs on intended Windows threads, serialize render/context ownership, handle loss of desktop shell and display reconfiguration. No images means no image rendering, but tray and event loop remain active.
 
 **Scale/Scope**: One desktop session, multiple monitors with negative virtual-desktop coordinates, zero to many local photos, one main + ten background pictures per monitor at startup; queue accesses serialized; the image cache must avoid retaining unbounded decoded textures.
 
@@ -37,7 +37,7 @@ Create an independent Windows 11 desktop wallpaper executable in Rust using Dire
 | Principle | Design response / gate |
 | --- | --- |
 | I. Preserve C# behavior | `animation/legacy_math.rs` uses exact source equations; table-driven golden tests for float curves, phase boundaries, image placement, screen-area weights. Startup is a documented owner-approved exception, not an excuse to modify normal transitions. **Pass at design level.** |
-| II. Rust + D3D11/VSync | Win32 shell and Direct3D11 behind explicit adapters; hardware device with WARP for WindowsEnv; submit frames with VSync at target display rate during animations, elapsed-time mapping retains C# math/duration; zero idle frames; test display refresh differences and device loss. **Pass at design level; test hardware later.** |
+| II. Rust + D3D11/VSync | Win32 shell and Direct3D11 behind explicit adapters; hardware device with WARP for WindowsEnv; submit frames with VSync capped at `min(refresh_hz, max_fps)` during animations, with default cap 120; elapsed-time mapping retains C# math/duration; zero idle frames; test display refresh differences and device loss. **Pass at design level; test hardware later.** |
 | III. Tray + YAML + autostart | Typed YAML with 30s default and 60% single threshold plus validation; tray commands and an immediate per-user HKCU Run checkbox that writes, reads back and reports failure without admin rights. OS autostart state is not mirrored in YAML. **Pass at design level.** |
 | IV. Simple due-time guard | Scheduler waits, then performs one short bounded utilization request at each normal due time; >= YAML threshold skips, < allows; no hysteresis, no long-term calibration or idle sampling. Startup ignores the guard; empty state rescans only once per due tick. **Pass at design level; actual GPU metric needs PoC.** |
 | V. Testable equivalence | Deterministic animation, monitor geometry, image sequence, timer and empty-state tests, plus recorded WindowsEnv and physical GPU acceptance. **Pass at design level; execution pending.** |
@@ -73,7 +73,7 @@ rust/
 ├── rust-toolchain.toml
 ├── src/
 │   ├── main.rs                # Win32 message loop, startup/exit
-│   ├── settings.rs            # YAML parser/validator, atomic reload
+│   ├── settings.rs            # YAML parser/validator, atomic reload incl. max_fps
 │   ├── tray.rs                # Shell_NotifyIcon state and commands
 │   ├── autostart.rs           # Per-user HKCU Run toggle/read-back
 │   ├── app_state.rs           # Lifecycle and orchestration
@@ -90,14 +90,14 @@ rust/
 │       ├── mod.rs
 │       ├── d3d11.rs
 │       ├── image_decode.rs
-│       └── swapchain.rs       # VSync presentation to monitor refresh rate
+│       └── swapchain.rs       # VSync presentation under per-monitor FPS cap
 └── tests/
     ├── animation_golden.rs
     ├── image_queue_cycle.rs
     ├── scheduler_load.rs
     ├── config_contract.rs
     ├── windows_integration.rs
-    ├── vsync_pacing.rs
+    ├── vsync_pacing.rs        # 60/120/144/240Hz and editable max_fps
     └── autostart_registry.rs
 ```
 
@@ -106,10 +106,10 @@ rust/
 ## Workstreams and Ordering
 
 1. **Ground-truth and Windows API spikes**: extract immutable `master` animation samples and edge cases; confirm WindowsEnv build/runtime, D3D11 WARP path, WorkerW integration, tray notifications, and whether a simple one-shot bounded GPU/CPU load sample is available. If an API is unsuitable, document alternatives before writing the production adapter.
-2. **Platform-free core**: typed config (30 seconds / one 60% threshold), image queue with cycle-end rescan, deterministic monitor selection, scheduler with empty-source deadlines and GPU gate, legacy animation math; lock in golden tests first.
+2. **Platform-free core**: typed config (30 seconds / one 60% threshold / max_fps default 120), image queue with cycle-end rescan, deterministic monitor selection, scheduler with empty-source deadlines and GPU gate, legacy animation math; lock in golden tests first.
 3. **Startup composition**: per-monitor center image then ten simultaneous-but-staggered slide-ins; reuse the shared queue, ignore load sensing during initial composition; test layering and completion-to-idle.
-4. **Windows adapters**: system tray with immediate HKCU Run autostart registration, WorkerW, monitor change events, image decode/texture upload and D3D11 renderer with VSync (sync interval 1) and hardware/WARP selection. Keep window-handle lifetime and drawing thread explicit.
-5. **Integration & acceptance**: WindowsEnv 25H2 smoke tests, YAML defaults/overrides, 59.9/60/60.1% guard boundaries, tray autostart registry write/delete/read-back, Explorer restart, monitor hot-plug, CPU-sampler fallback, 60/120/144Hz VSync pacing when supported; physical GPU utilization plus multi-monitor visual acceptance, logs and release readiness.
+4. **Windows adapters**: system tray with immediate HKCU Run autostart registration, WorkerW, monitor change events, image decode/texture upload and D3D11 renderer with VSync (sync interval 1), max_fps-aware scheduling and hardware/WARP selection. Keep window-handle lifetime and drawing thread explicit.
+5. **Integration & acceptance**: WindowsEnv 25H2 smoke tests, YAML defaults/overrides, 59.9/60/60.1% guard boundaries, tray autostart registry write/delete/read-back, Explorer restart, monitor hot-plug, CPU-sampler fallback, 60/120/144/240Hz VSync + max_fps=60/120/240 pacing when supported; physical GPU utilization plus multi-monitor visual acceptance, logs and release readiness.
 6. **Packaging**: deliver Windows executable and documented install/start/quit behavior after validation. Installer format and signing are not silently assumed.
 
 ## State and Deadline Contract
@@ -118,7 +118,7 @@ rust/
 - `Startup`: as soon as valid images are available for a fresh launch, initialize the per-monitor main + ten background slide-ins; do not read GPU/CPU. After completion schedule the first normal interval. The case of a late recovery from no-images while a stale composed wallpaper exists is handled by the `Startup`/`Idle` state distinction and must not overwrite an already valid static image unnecessarily.
 - `Idle`: wait without drawing or monitoring. On due tick, request a short bounded total-GPU (test CPU) measurement; if usage >= configured one threshold (default 60%), keep current image and reschedule `now + interval`; otherwise (< threshold) claim the next image and run the unchanged normal transition. No recovery latch or background averaging.
 - `PausedByUser`: retain current static wallpaper; only explicit unpause/reload/quit events trigger work. The details of pause/resume timer semantics are a proposed UI contract in [tray-behavior.md](contracts/tray-behavior.md).
-- `Rendering`: present only while animating, pace presentation with display VSync (`Present(1,0)` where compatible) and derive original animation parameter from monotonic elapsed time so a 144Hz output does not progress faster than 60Hz. Keep source cosh/phase/transform math unchanged; no load checks mid-animation. On completion return to `Idle` with no render loop and no catch-up burst.
+- `Rendering`: present only while animating, pace eligible presentation with display VSync (`Present(1,0)` where compatible), throttle render/frame submission to no more than `min(refresh_hz, max_fps)` where default max_fps=120, and derive original animation parameter from monotonic elapsed time so neither refresh nor cap alters animation duration. Keep source cosh/phase/transform math unchanged; no load checks mid-animation. On completion return to `Idle` with no render loop and no catch-up burst.
 - `ExplorerRecreated`/`DisplaysChanged`: restore the desktop surface and screen records without mutating the random slideshow algorithm. Re-rendering an existing static frame to restore lost resources is a recovery action and is not an unauthorized slideshow transition.
 
 ## Design Risks and Approved Parameters
@@ -127,7 +127,7 @@ rust/
 - **Sampling semantics**: Favor a cheap, quick best-effort system-wide utilization reading at the transition deadline; do NOT run long calibration, a periodic sampler or an accuracy-maximizing history collector. If the chosen Windows API needs multiple snapshots, they MUST occur only as part of one short bounded due-time operation. Represent unavailable readings as `Unknown` rather than zero; proposed failure handling is skip once and retry next full interval, pending Windows PoC.
 - **GPU aggregation**: Select a lightweight reasonably representative system-wide GPU usage metric; do not naively sum engine percentages or claim precision beyond the chosen API. Record adapter/engine policy and limitations in diagnostics; do not add costly long-run calibration merely to refine the 60% gate.
 - **No-image recovery**: User selected auto-recovery on the normal timer. A first-time successful recovery into `Startup` is a design proposal; verify the user experience before finalizing implementation. No separate image polling process is permitted.
-- **Presentation pacing**: DXGI SyncInterval=1 requests vertical sync, not an unconditional guarantee of the display refresh rate. A single window straddling monitors may synchronize with only one output, so use per-monitor presentation surfaces where feasible or report multi-rate constraints. Keep normal C# time scale using elapsed time rather than frame count.
+- **Presentation pacing and cap**: DXGI SyncInterval=1 requests vertical sync, but does NOT itself enforce `max_fps < refresh_hz`. Throttle scheduled frames before rendering/submission using monotonic time, avoid sleep-free busy spins, and present at eligible vblanks; target `min(refresh_hz, max_fps)` with actual rates allowed to be lower due to display cadence, WARP/DWM, and scheduling jitter. At 144Hz with `max_fps=120`, skipped/irregular vblank pacing may yield less than perfectly even 120FPS; do not claim exact 120. A spanning window may sync with one output, so use per-monitor presentation surfaces where feasible. Keep C# curve/time scale independent of number of frames. On YAML reload the cap becomes effective on next scheduled animation frame.
 - **Autostart state**: Implement per-user Windows sign-in autostart using `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` with a single app-owned value. Quote the installed executable path, verify the path is usable and registry command-line length; clicking the tray item writes/deletes immediately and reads back before updating checkmark. On startup and opening the tray, read OS state rather than YAML. OS may defer launch or user may disable the startup item externally; do not promise exact boot-time execution.
 - **Visual equivalence**: D3D11 sampling, antialiasing, alpha blending and pixel placement may differ from GDI+ even with identical math. Use pixel/geometry-based tests to decide what needs matching; never change source equations to mask blending differences.
 
@@ -151,6 +151,6 @@ No constitution violations are proposed. The Win32 adapter layer exists to keep 
 | System GPU utilization gate | One `60%` threshold by default, editable through YAML; at due time >= threshold skip, otherwise play |
 | WindowsEnv fallback | The same one-threshold rule on system CPU usage where GPU is unavailable |
 | Utilization sampling | Quick bounded measurement only after a normal slideshow deadline; no long calibration |
-| Animation frame pacing | Aim for target monitor refresh rate with DXGI VSync during active animation; no 40ms frame cap |
+| Animation frame pacing | DXGI VSync plus adjustable `max_fps` (default 120), target `min(refresh_rate, max_fps)` only during active animation; no 40ms frame cap, no idle rendering |
 | Original normal animation | Preserve historic math and time scale using monotonic elapsed-time progression independent of display refresh |
 | Tray sign-in startup | User checkbox writes or removes current-user Windows autostart registry entry immediately and verifies via read-back; no admin or YAML toggle |

@@ -6,13 +6,16 @@
 | --- | --- | --- | --- |
 | `image_folders` | sequence of Windows folder paths | Required; unique paths; empty array allowed and produces `NoImages` | Global source for all monitors. Nonrecursive directory scan unless user requests a future change. |
 | `slideshow_interval_seconds` | positive integer | **30** if omitted; must be greater than zero | Delay between normal transition opportunities, high-GPU skips, and empty-source rescans; changing it on reload changes future deadlines. |
+| `max_fps` | positive integer | **120** if omitted; must be greater than zero; safe implementation bounds to be validated | Maximum animated frame submission FPS while VSync remains enabled. Target `min(monitor_refresh_hz, max_fps)`, e.g., 60Hz/120 -> 60; 144Hz/120 -> <=120; 240Hz/120 -> <=120. Applies to startup and ordinary animations, **not** a background render loop. Reload updates cap; cannot change animation math or duration. |
 | `load_guard.enabled` | boolean | `true` if omitted | Controls load gating for normal slideshow only, never startup composition. |
 | `load_guard.metric` | `gpu_total` or `cpu_total` | `gpu_total` if omitted | Production uses best-effort system-wide GPU; GPU-less WindowsEnv testing uses system-wide CPU. |
 | `load_guard.threshold_percent` | number | **60** if omitted; range 0 to 100 inclusive | ONE threshold: usage `>=` this value means skip normal transition; below means allow, with no hysteresis or separate recovery value. |
 
-**Removed keys**: `load_guard.pause_at_percent` and `load_guard.resume_at_percent` are not accepted. There is no `gpu_poll_interval`, `directory_poll_interval`, `background_monitor`, `autostart`, `refresh_rate_cap`, `target_fps` or setting to alter the original slideshow math. The VSync target follows each monitor's effective display refresh rate only while animation runs.
+**Removed keys**: `load_guard.pause_at_percent` and `load_guard.resume_at_percent` are not accepted. There is no `gpu_poll_interval`, `directory_poll_interval`, `background_monitor`, `autostart`, `refresh_rate_cap`, `target_fps` or setting to alter the original slideshow math. The only explicit frame cap key is **`max_fps`**. VSync stays enabled during animation; rendering/presentation is paced to the lower of effective display refresh and `max_fps`, never busy-spins between frames.
 
 **Parsing and state**: Validate the entire YAML before atomically applying. Unknown/old keys and invalid numeric values produce an understandable status in the tray while keeping the last valid configuration and static wallpaper. A missing image folder is not a crash; no valid photos means `NoImages` with the normal-timer rescan rule. Use case-insensitive supported JPG/JPEG/JFIF/PNG extensions and require successful decode before rendering.
+
+**Animation rate limit**: `max_fps` is a ceiling, not a guaranteed achieved FPS. VSync alone on a 144Hz or 240Hz screen would exceed 120FPS, so the renderer must avoid generating frames when an eligible frame time has not arrived. At 144Hz, vblank scheduling can cause irregular cadence or measured rates below a perfect 120FPS; the original elapsed-time animation duration remains unchanged.
 
 **Load measurement**: One brief, bounded best-effort measurement per normal transition due-time; on real machines total GPU usage, WindowsEnv CPU usage. No history, expensive precision calibration, periodic monitor, or restart-only toggle. Invalid measurement is an explicit unknown/error rather than zero; failure policy and latency verified in Windows integration testing.
 

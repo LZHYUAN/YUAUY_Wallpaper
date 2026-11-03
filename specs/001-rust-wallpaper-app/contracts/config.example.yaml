@@ -4,10 +4,13 @@
 image_folders:
   - 'C:\Users\Public\Pictures'
 slideshow_interval_seconds: 30
+max_fps: 120               # FPS ceiling while animating; VSync stays enabled
 load_guard:
   enabled: true
   metric: gpu_total       # WindowsEnv without a GPU: cpu_total
   threshold_percent: 60  # Single threshold: >=60 skip, <60 proceed
 # No resume threshold, no polling interval, no long calibration process.
 # When no images exist, rescan only on the normal slideshow deadline.
-# During animation, frame presentation targets display refresh via VSync.
+# During animation: VSync + max_fps, target min(display refresh rate, max_fps).
+# For 60Hz, max_fps 120 yields <=60fps; for 144Hz/240Hz it yields <=120fps.
+# In idle or NoImages there is no continuous frame rendering.
