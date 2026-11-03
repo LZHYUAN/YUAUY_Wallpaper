@@ -4,10 +4,46 @@
 use yuauy_wallpaper::workerw_probe_options::DesktopTopology;
 use yuauy_wallpaper::workerw_probe_options::{Mode, parse_args};
 
-fn options(args: impl IntoIterator<Item = String>) -> Result<Mode, &'static str> {
+/// The opt-in A/B test changes ONLY the owned child's sibling order.
+/// The same DirectComposition device, swapchain, color and window styles are used.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ZLayer {
+    BelowDefView,
+    AboveDefView,
+}
+
+#[cfg(windows)]
+impl ZLayer {
+    const fn name(self) -> &'static str {
+        match self {
+            Self::BelowDefView => "below_defview",
+            Self::AboveDefView => "above_defview",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+struct ProbeArgs {
+    mode: Mode,
+    layer: ZLayer,
+}
+
+fn options(args: impl IntoIterator<Item = String>) -> Result<ProbeArgs, &'static str> {
+    let mut args: Vec<String> = args.into_iter().collect();
+    // The above-icon-view control is deliberately accepted only as the final
+    // token on an explicitly bounded modern attach command.
+    let layer = if args.last().is_some_and(|arg| arg == "--above-icon-view") {
+        args.pop();
+        ZLayer::AboveDefView
+    } else {
+        ZLayer::BelowDefView
+    };
     match parse_args(args)? {
         Mode::Attach { .. } => Err("legacy --attach is forbidden; use --attach-modern"),
-        mode => Ok(mode),
+        Mode::Inspect if layer == ZLayer::AboveDefView => {
+            Err("--above-icon-view requires explicit --attach-modern")
+        }
+        mode => Ok(ProbeArgs { mode, layer }),
     }
 }
 
@@ -39,7 +75,7 @@ fn main() -> std::process::ExitCode {
         Ok(mode) => mode,
         Err(message) => {
             eprintln!(
-                "REFUSED {message}; use --inspect or --attach-modern [--duration-ms 1..10000]"
+                "REFUSED {message}; use --inspect or --attach-modern [--duration-ms 1..10000] [--above-icon-view]"
             );
             return std::process::ExitCode::FAILURE;
         }
@@ -64,7 +100,7 @@ fn main() -> std::process::ExitCode {
 
 #[cfg(windows)]
 mod probe {
-    use super::require_modern;
+    use super::{ProbeArgs, ZLayer, require_modern};
     use std::{
         thread,
         time::{Duration, Instant},
@@ -96,9 +132,9 @@ mod probe {
             UI::WindowsAndMessaging::{
                 CreateWindowExW, DestroyWindow, DispatchMessageW, FindWindowExW, FindWindowW,
                 GW_HWNDNEXT, GWL_EXSTYLE, GetParent, GetShellWindow, GetWindow, GetWindowLongW,
-                GetWindowRect, GetWindowThreadProcessId, IsWindow, IsWindowVisible, MSG, PM_REMOVE,
-                PeekMessageW, SWP_NOACTIVATE, SWP_SHOWWINDOW, SetWindowPos, TranslateMessage,
-                WS_CHILD, WS_CLIPSIBLINGS, WS_DISABLED, WS_EX_NOACTIVATE,
+                GetWindowRect, GetWindowThreadProcessId, HWND_TOP, IsWindow, IsWindowVisible, MSG,
+                PM_REMOVE, PeekMessageW, SWP_NOACTIVATE, SWP_SHOWWINDOW, SetWindowPos,
+                TranslateMessage, WS_CHILD, WS_CLIPSIBLINGS, WS_DISABLED, WS_EX_NOACTIVATE,
                 WS_EX_NOREDIRECTIONBITMAP, WS_EX_TRANSPARENT,
             },
         },
@@ -228,7 +264,28 @@ mod probe {
         Ok(())
     }
 
-    pub(super) fn run(mode: Mode) -> Result<String, Outcome> {
+    /// Read sibling order without changing any Explorer-owned HWND.
+    fn expected_relative_order(hwnd: HWND, defview: HWND, layer: ZLayer) -> bool {
+        let (start, target) = match layer {
+            ZLayer::BelowDefView => (defview, hwnd),
+            ZLayer::AboveDefView => (hwnd, defview),
+        };
+        let mut current = start;
+        for _ in 0..128 {
+            let Some(next) = (unsafe { GetWindow(current, GW_HWNDNEXT) }).ok() else {
+                break;
+            };
+            if next == target {
+                return true;
+            }
+            current = next;
+        }
+        false
+    }
+
+    pub(super) fn run(args: ProbeArgs) -> Result<String, Outcome> {
+        let mode = args.mode;
+        let layer = args.layer;
         let host = inspect()?;
         if mode == Mode::Inspect {
             return Ok(format!(
@@ -350,7 +407,10 @@ mod probe {
         unsafe {
             SetWindowPos(
                 hwnd,
-                Some(host.defview),
+                Some(match layer {
+                    ZLayer::BelowDefView => host.defview,
+                    ZLayer::AboveDefView => HWND_TOP,
+                }),
                 12,
                 12,
                 220,
@@ -365,12 +425,13 @@ mod probe {
         while started.elapsed() < Duration::from_millis(duration_ms) {
             validate(&host, mode)?;
             if unsafe { GetParent(hwnd) }.ok() != Some(host.progman)
-                || unsafe { GetWindow(host.defview, GW_HWNDNEXT) }.ok() != Some(hwnd)
+                || !expected_relative_order(hwnd, host.defview, layer)
                 || !unsafe { IsWindowVisible(hwnd).as_bool() }
             {
-                return Err(Outcome::Fail(
-                    "owned_child_parent_zorder_or_visibility_changed".to_owned(),
-                ));
+                return Err(Outcome::Fail(format!(
+                    "owned_child_parent_zorder_or_visibility_changed placement={}",
+                    layer.name()
+                )));
             }
             // Opaque saturated magenta, distinct from the legacy lime marker.
             unsafe { context.ClearRenderTargetView(&view, &[0.95, 0.03, 0.75, 1.0]) };
@@ -418,7 +479,8 @@ mod probe {
             )));
         }
         Ok(format!(
-            "API_SUBMISSIONS_ONLY path=dcomp_composition_flip_sequential driver=warp feature_level=0x{:x} present_s_ok={frames} busy={busy} last_present_hresult=0x{last_hr:08x} duration_ms={duration_ms} child_destroyed=true visual_wallpaper=UNVERIFIED requires_live_screenshot=true",
+            "API_SUBMISSIONS_ONLY path=dcomp_composition_flip_sequential placement={} driver=warp feature_level=0x{:x} present_s_ok={frames} busy={busy} last_present_hresult=0x{last_hr:08x} duration_ms={duration_ms} sibling_order_verified=true child_destroyed=true visual_wallpaper=UNVERIFIED requires_live_screenshot=true",
+            layer.name(),
             level.0
         ))
     }
@@ -427,7 +489,7 @@ mod probe {
 #[cfg(test)]
 mod tests {
     use super::*;
-    fn parse(args: &[&str]) -> Result<Mode, &'static str> {
+    fn parse(args: &[&str]) -> Result<ProbeArgs, &'static str> {
         options(args.iter().map(|s| (*s).to_owned()))
     }
     fn eligible() -> DesktopTopology {
@@ -441,11 +503,38 @@ mod tests {
     }
     #[test]
     fn safe_default_and_duration_boundaries() {
-        assert_eq!(parse(&[]), Ok(Mode::Inspect));
-        assert_eq!(parse(&["--inspect"]), Ok(Mode::Inspect));
+        assert_eq!(
+            parse(&[]),
+            Ok(ProbeArgs {
+                mode: Mode::Inspect,
+                layer: ZLayer::BelowDefView
+            })
+        );
+        assert_eq!(
+            parse(&["--inspect"]),
+            Ok(ProbeArgs {
+                mode: Mode::Inspect,
+                layer: ZLayer::BelowDefView
+            })
+        );
         assert_eq!(
             parse(&["--attach-modern"]),
-            Ok(Mode::AttachModern { duration_ms: 3000 })
+            Ok(ProbeArgs {
+                mode: Mode::AttachModern { duration_ms: 3000 },
+                layer: ZLayer::BelowDefView
+            })
+        );
+        assert_eq!(
+            parse(&[
+                "--attach-modern",
+                "--duration-ms",
+                "5000",
+                "--above-icon-view"
+            ]),
+            Ok(ProbeArgs {
+                mode: Mode::AttachModern { duration_ms: 5000 },
+                layer: ZLayer::AboveDefView
+            })
         );
         for duration in ["1", "10000"] {
             assert!(parse(&["--attach-modern", "--duration-ms", duration]).is_ok());
@@ -457,6 +546,15 @@ mod tests {
             vec!["--attach-modern", "--duration-ms"],
             vec!["--attach-modern", "--request-workerw"],
             vec!["--attach-modern", "--attach-modern"],
+            vec!["--inspect", "--above-icon-view"],
+            vec!["--above-icon-view"],
+            vec![
+                "--attach-modern",
+                "--above-icon-view",
+                "--duration-ms",
+                "100",
+            ],
+            vec!["--attach-modern", "--above-icon-view", "--above-icon-view"],
         ] {
             assert!(parse(&args).is_err(), "{args:?}");
         }
