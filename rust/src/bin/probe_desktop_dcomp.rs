@@ -4,20 +4,31 @@
 use yuauy_wallpaper::workerw_probe_options::DesktopTopology;
 use yuauy_wallpaper::workerw_probe_options::{Mode, parse_args};
 
-/// The opt-in A/B test changes ONLY the owned child's sibling order.
-/// The same DirectComposition device, swapchain, color and window styles are used.
+/// Placement experiments reuse the same DirectComposition WARP visual.
+/// Only owned windows are created, positioned and destroyed.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum ZLayer {
     BelowDefView,
     AboveDefView,
+    TopLevelBelowProgman,
+    TopLevelAboveProgman,
 }
 
-#[cfg(windows)]
 impl ZLayer {
+    const fn is_top_level(self) -> bool {
+        matches!(
+            self,
+            Self::TopLevelBelowProgman | Self::TopLevelAboveProgman
+        )
+    }
+
+    #[cfg(windows)]
     const fn name(self) -> &'static str {
         match self {
             Self::BelowDefView => "below_defview",
             Self::AboveDefView => "above_defview",
+            Self::TopLevelBelowProgman => "top_level_below_progman",
+            Self::TopLevelAboveProgman => "top_level_above_progman",
         }
     }
 }
@@ -31,6 +42,34 @@ struct ProbeArgs {
 
 fn options(args: impl IntoIterator<Item = String>) -> Result<ProbeArgs, &'static str> {
     let mut args: Vec<String> = args.into_iter().collect();
+    let mut top_level = None;
+    let mut remaining = Vec::new();
+    for arg in args {
+        let placement = match arg.as_str() {
+            "--top-level-below-progman" => Some(ZLayer::TopLevelBelowProgman),
+            "--top-level-above-progman" => Some(ZLayer::TopLevelAboveProgman),
+            _ => None,
+        };
+        if let Some(placement) = placement {
+            if top_level.replace(placement).is_some() {
+                return Err("top-level placement modes are mutually exclusive and cannot repeat");
+            }
+        } else {
+            remaining.push(arg);
+        }
+    }
+    args = remaining;
+    if top_level.is_some()
+        && (args
+            .iter()
+            .any(|arg| arg == "--above-icon-view" || arg == "--layered-alpha")
+            || args.first().is_none_or(|arg| arg != "--attach-modern")
+            || !args.iter().any(|arg| arg == "--duration-ms"))
+    {
+        return Err(
+            "top-level placement requires --attach-modern --duration-ms 1..10000 and forbids child diagnostics",
+        );
+    }
     // The above-icon-view control is deliberately accepted only as the final
     // token on an explicitly bounded modern attach command.
     let layer = if args.last().is_some_and(|arg| arg == "--above-icon-view") {
@@ -51,9 +90,12 @@ fn options(args: impl IntoIterator<Item = String>) -> Result<ProbeArgs, &'static
     } else {
         None
     };
+    let layer = top_level.unwrap_or(layer);
     match parse_args(args)? {
         Mode::Attach { .. } => Err("legacy --attach is forbidden; use --attach-modern"),
-        Mode::Inspect if layer == ZLayer::AboveDefView || layered_alpha.is_some() => {
+        Mode::Inspect
+            if layer == ZLayer::AboveDefView || layer.is_top_level() || layered_alpha.is_some() =>
+        {
             Err("diagnostic flags require explicit --attach-modern")
         }
         mode => Ok(ProbeArgs {
@@ -92,7 +134,7 @@ fn main() -> std::process::ExitCode {
         Ok(mode) => mode,
         Err(message) => {
             eprintln!(
-                "REFUSED {message}; use --inspect or --attach-modern [--duration-ms 1..10000] [--layered-alpha 0|128|255] [--above-icon-view]"
+                "REFUSED {message}; use --inspect or --attach-modern [--duration-ms 1..10000] [--layered-alpha 0|128|255] [--above-icon-view] or --attach-modern --duration-ms 1..10000 (--top-level-below-progman | --top-level-above-progman)"
             );
             return std::process::ExitCode::FAILURE;
         }
@@ -148,13 +190,13 @@ mod probe {
             System::Com::{COINIT_APARTMENTTHREADED, CoInitializeEx, CoUninitialize},
             UI::WindowsAndMessaging::{
                 CreateWindowExW, DestroyWindow, DispatchMessageW, FindWindowExW, FindWindowW,
-                GW_HWNDNEXT, GWL_EXSTYLE, GetLayeredWindowAttributes, GetParent, GetShellWindow,
-                GetWindow, GetWindowLongW, GetWindowRect, GetWindowThreadProcessId, HWND_TOP,
-                IsWindow, IsWindowVisible, LAYERED_WINDOW_ATTRIBUTES_FLAGS, LWA_ALPHA, MSG,
-                PM_REMOVE, PeekMessageW, SWP_NOACTIVATE, SWP_SHOWWINDOW,
+                GW_HWNDNEXT, GW_HWNDPREV, GWL_EXSTYLE, GetLayeredWindowAttributes, GetParent,
+                GetShellWindow, GetWindow, GetWindowLongW, GetWindowRect, GetWindowThreadProcessId,
+                HWND_TOP, IsWindow, IsWindowVisible, LAYERED_WINDOW_ATTRIBUTES_FLAGS, LWA_ALPHA,
+                MSG, PM_REMOVE, PeekMessageW, SWP_NOACTIVATE, SWP_SHOWWINDOW,
                 SetLayeredWindowAttributes, SetWindowPos, TranslateMessage, WS_CHILD,
                 WS_CLIPSIBLINGS, WS_DISABLED, WS_EX_LAYERED, WS_EX_NOACTIVATE,
-                WS_EX_NOREDIRECTIONBITMAP, WS_EX_TRANSPARENT,
+                WS_EX_NOREDIRECTIONBITMAP, WS_EX_TOOLWINDOW, WS_EX_TRANSPARENT, WS_POPUP,
             },
         },
         core::{Interface, w},
@@ -178,19 +220,36 @@ mod probe {
             unsafe { CoUninitialize() };
         }
     }
-    struct OwnedChild(HWND);
+    struct OwnedChild {
+        hwnd: HWND,
+        layer: ZLayer,
+        frames: u32,
+        last_hr: Option<u32>,
+    }
     impl OwnedChild {
         fn destroy(&mut self) -> Result<(), Outcome> {
-            if self.0.is_invalid() {
+            if self.hwnd.is_invalid() {
                 return Ok(());
             }
-            let hwnd = self.0;
+            let hwnd = self.hwnd;
             // SAFETY: this guard exclusively owns this thread's test HWND.
             unsafe { DestroyWindow(hwnd) }.map_err(|e| failure("DestroyWindow", e))?;
             if unsafe { IsWindow(Some(hwnd)).as_bool() } {
                 return Err(Outcome::Fail("child_cleanup_not_verified".to_owned()));
             }
-            self.0 = HWND::default();
+            self.hwnd = HWND::default();
+            println!(
+                "CLEANUP path=dcomp_composition_flip_sequential placement={} frames={} last_present_hresult={} {}=true visual_wallpaper=UNVERIFIED requires_live_screenshot=true",
+                self.layer.name(),
+                self.frames,
+                self.last_hr
+                    .map_or_else(|| "NOT_RUN".to_owned(), |hr| format!("0x{hr:08x}")),
+                if self.layer.is_top_level() {
+                    "owned_window_destroyed"
+                } else {
+                    "child_destroyed"
+                }
+            );
             Ok(())
         }
     }
@@ -253,7 +312,10 @@ mod probe {
             .map_err(|_| Outcome::Skip("direct_DefView_absent".to_owned()))?;
         let owner = pid(progman);
         let shell = unsafe { GetShellWindow() };
-        let matches_shell = !shell.is_invalid() && owner != 0 && pid(shell) == owner;
+        let matches_shell = !shell.is_invalid()
+            && owner != 0
+            && pid(shell) == owner
+            && unsafe { GetParent(progman) }.is_err();
         let topology = DesktopTopology {
             has_progman: true,
             has_defview_child: true,
@@ -288,6 +350,12 @@ mod probe {
         let (start, target) = match layer {
             ZLayer::BelowDefView => (defview, hwnd),
             ZLayer::AboveDefView => (hwnd, defview),
+            ZLayer::TopLevelBelowProgman => {
+                return unsafe { GetWindow(defview, GW_HWNDNEXT) }.ok() == Some(hwnd);
+            }
+            ZLayer::TopLevelAboveProgman => {
+                return unsafe { GetWindow(hwnd, GW_HWNDNEXT) }.ok() == Some(defview);
+            }
         };
         let mut current = start;
         for _ in 0..128 {
@@ -300,6 +368,29 @@ mod probe {
             current = next;
         }
         false
+    }
+
+    fn validate_owned(hwnd: HWND, host: &Host, layer: ZLayer) -> Result<(), Outcome> {
+        let top_level = layer.is_top_level();
+        let expected_parent = if top_level { None } else { Some(host.progman) };
+        if unsafe { GetParent(hwnd) }.ok() != expected_parent
+            || !expected_relative_order(
+                hwnd,
+                if top_level {
+                    host.progman
+                } else {
+                    host.defview
+                },
+                layer,
+            )
+            || !unsafe { IsWindowVisible(hwnd).as_bool() }
+        {
+            return Err(Outcome::Fail(format!(
+                "owned_window_parent_zorder_or_visibility_changed placement={}",
+                layer.name()
+            )));
+        }
+        Ok(())
     }
 
     pub(super) fn run(args: ProbeArgs) -> Result<String, Outcome> {
@@ -336,6 +427,12 @@ mod probe {
         validate(&host, mode)?;
         // Hidden until the composition tree is ready. Layered mode intentionally
         // omits NOREDIRECTIONBITMAP and retains the same DComp WARP visual.
+        let top_level = layer.is_top_level();
+        let (x, y) = if top_level {
+            (rect.left + 12, rect.top + 12)
+        } else {
+            (12, 12)
+        };
         let exstyle = WS_EX_NOACTIVATE
             | WS_EX_TRANSPARENT
             | if layered_alpha.is_some() {
@@ -343,24 +440,44 @@ mod probe {
             } else {
                 WS_EX_NOREDIRECTIONBITMAP
             };
+        let exstyle = if top_level {
+            exstyle | WS_EX_TOOLWINDOW
+        } else {
+            exstyle
+        };
         let hwnd = unsafe {
             CreateWindowExW(
                 exstyle,
                 w!("STATIC"),
                 w!("YUAUY DComp WARP diagnostic"),
-                WS_CHILD | WS_CLIPSIBLINGS | WS_DISABLED,
-                12,
-                12,
+                if top_level {
+                    WS_POPUP | WS_DISABLED
+                } else {
+                    WS_CHILD | WS_CLIPSIBLINGS | WS_DISABLED
+                },
+                x,
+                y,
                 220,
                 190,
-                Some(host.progman),
+                if top_level { None } else { Some(host.progman) },
                 None,
                 None,
                 None,
             )
         }
         .map_err(|e| failure("CreateWindowExW", e))?;
-        let mut child = OwnedChild(hwnd);
+        let mut child = OwnedChild {
+            hwnd,
+            layer,
+            frames: 0,
+            last_hr: None,
+        };
+        let expected_parent = if top_level { None } else { Some(host.progman) };
+        if unsafe { GetParent(hwnd) }.ok() != expected_parent {
+            return Err(Outcome::Fail(
+                "owned_window_initial_parent_mismatch".to_owned(),
+            ));
+        }
         let mut layered_readback = "none".to_owned();
         if let Some(alpha) = layered_alpha {
             // Only configure OUR own HWND. Layered children require an explicit
@@ -450,47 +567,49 @@ mod probe {
             .map_err(|e| failure("CreateRenderTargetView", e))?;
         let view = view.ok_or_else(|| Outcome::Fail("no_render_target".to_owned()))?;
         validate(&host, mode)?;
-        let started = Instant::now();
+        // Insertion anchors are read only. SetWindowPos always targets our HWND.
+        let insert_after = match layer {
+            ZLayer::BelowDefView => host.defview,
+            ZLayer::AboveDefView => HWND_TOP,
+            ZLayer::TopLevelBelowProgman => host.progman,
+            ZLayer::TopLevelAboveProgman => {
+                unsafe { GetWindow(host.progman, GW_HWNDPREV) }.unwrap_or(HWND_TOP)
+            }
+        };
         unsafe {
             SetWindowPos(
                 hwnd,
-                Some(match layer {
-                    ZLayer::BelowDefView => host.defview,
-                    ZLayer::AboveDefView => HWND_TOP,
-                }),
-                12,
-                12,
+                Some(insert_after),
+                x,
+                y,
                 220,
                 190,
                 SWP_NOACTIVATE | SWP_SHOWWINDOW,
             )
         }
-        .map_err(|e| failure("SetWindowPos_owned_child", e))?;
+        .map_err(|e| failure("SetWindowPos_owned_window", e))?;
+        validate(&host, mode)?;
+        validate_owned(hwnd, &host, layer)?;
+        let started = Instant::now();
         let mut frames = 0u32;
         let mut busy = 0u32;
         let mut last_hr = 0u32;
         while started.elapsed() < Duration::from_millis(duration_ms) {
             validate(&host, mode)?;
-            if unsafe { GetParent(hwnd) }.ok() != Some(host.progman)
-                || !expected_relative_order(hwnd, host.defview, layer)
-                || !unsafe { IsWindowVisible(hwnd).as_bool() }
-            {
-                return Err(Outcome::Fail(format!(
-                    "owned_child_parent_zorder_or_visibility_changed placement={}",
-                    layer.name()
-                )));
-            }
+            validate_owned(hwnd, &host, layer)?;
             // Opaque saturated magenta, distinct from the legacy lime marker.
             unsafe { context.ClearRenderTargetView(&view, &[0.95, 0.03, 0.75, 1.0]) };
             // No blocking vblank wait in this bounded diagnostic; not an FPS test.
             let hr = unsafe { chain.Present(0, DXGI_PRESENT_DO_NOT_WAIT) };
             last_hr = hr.0 as u32;
+            child.last_hr = Some(last_hr);
             if hr == DXGI_ERROR_WAS_STILL_DRAWING {
                 busy += 1;
             } else {
                 hr.ok().map_err(|e| failure("Present", e))?;
                 if hr.0 == 0 {
                     frames += 1;
+                    child.frames = frames;
                 }
             }
             let mut msg = MSG::default();
@@ -509,6 +628,8 @@ mod probe {
                     .min(Duration::from_millis(16)),
             );
         }
+        validate(&host, mode)?;
+        validate_owned(hwnd, &host, layer)?;
         tree.detach().map_err(|e| failure("DetachCommit", e))?;
         drop(view);
         drop(texture);
@@ -519,17 +640,24 @@ mod probe {
         drop(dxgi);
         drop(context);
         drop(device);
+        validate(&host, mode)?;
+        let cleanup = if top_level {
+            "owned_window_destroyed"
+        } else {
+            "child_destroyed"
+        };
         child.destroy()?;
         if frames == 0 {
             return Err(Outcome::Fail(format!(
-                "no_S_OK_present busy={busy} last_present_hresult=0x{last_hr:08x} child_destroyed=true visual_wallpaper=UNVERIFIED"
+                "no_S_OK_present busy={busy} last_present_hresult=0x{last_hr:08x} {cleanup}=true visual_wallpaper=UNVERIFIED"
             )));
         }
         Ok(format!(
-            "API_SUBMISSIONS_ONLY path=dcomp_composition_flip_sequential placement={} layered={} driver=warp feature_level=0x{:x} present_s_ok={frames} busy={busy} last_present_hresult=0x{last_hr:08x} duration_ms={duration_ms} sibling_order_verified=true child_destroyed=true visual_wallpaper=UNVERIFIED requires_live_screenshot=true",
+            "API_SUBMISSIONS_ONLY path=dcomp_composition_flip_sequential placement={} layered={} driver=warp feature_level=0x{:x} present_s_ok={frames} busy={busy} last_present_hresult=0x{last_hr:08x} duration_ms={duration_ms} sibling_order_verified=true parent={} {cleanup}=true visual_wallpaper=UNVERIFIED requires_live_screenshot=true",
             layer.name(),
             layered_readback,
-            level.0
+            level.0,
+            if top_level { "NONE" } else { "Progman" }
         ))
     }
 }
@@ -656,6 +784,102 @@ mod tests {
         }
         assert!(parse(&["--attach-modern", "--duration-ms", "1", "extra"]).is_err());
     }
+    #[test]
+    fn top_level_modes_require_exclusive_explicit_bounded_opt_in() {
+        let flags = ["--top-level-below-progman", "--top-level-above-progman"];
+        for flag in flags {
+            for args in [
+                vec![flag],
+                vec!["--inspect", flag],
+                vec!["--attach", "--duration-ms", "100", flag],
+                vec!["--attach-modern", flag],
+                vec!["--attach-modern", "--duration-ms", flag],
+                vec!["--attach-modern", "--duration-ms", "100", flag, flag],
+                vec![
+                    "--attach-modern",
+                    "--duration-ms",
+                    "100",
+                    flag,
+                    "--above-icon-view",
+                ],
+                vec![
+                    "--attach-modern",
+                    "--duration-ms",
+                    "100",
+                    "--above-icon-view",
+                    flag,
+                ],
+            ] {
+                assert!(parse(&args).is_err(), "{args:?}");
+            }
+            for duration in ["0", "10001", "-1", "NaN", "1.5", "18446744073709551616"] {
+                assert!(parse(&["--attach-modern", "--duration-ms", duration, flag]).is_err());
+            }
+            for alpha in ["0", "128", "255"] {
+                assert!(
+                    parse(&[
+                        "--attach-modern",
+                        "--duration-ms",
+                        "100",
+                        flag,
+                        "--layered-alpha",
+                        alpha
+                    ])
+                    .is_err()
+                );
+                assert!(
+                    parse(&[
+                        "--attach-modern",
+                        "--duration-ms",
+                        "100",
+                        "--layered-alpha",
+                        alpha,
+                        flag
+                    ])
+                    .is_err()
+                );
+            }
+        }
+        for order in [flags, [flags[1], flags[0]]] {
+            assert!(
+                parse(&[
+                    "--attach-modern",
+                    "--duration-ms",
+                    "100",
+                    order[0],
+                    order[1]
+                ])
+                .is_err()
+            );
+        }
+    }
+
+    #[test]
+    fn accepts_both_top_level_placements_at_duration_boundaries() {
+        for (flag, layer) in [
+            ("--top-level-below-progman", ZLayer::TopLevelBelowProgman),
+            ("--top-level-above-progman", ZLayer::TopLevelAboveProgman),
+        ] {
+            for duration in ["1", "10000"] {
+                let expected = Ok(ProbeArgs {
+                    mode: Mode::AttachModern {
+                        duration_ms: duration.parse().unwrap(),
+                    },
+                    layer,
+                    layered_alpha: None,
+                });
+                assert_eq!(
+                    parse(&["--attach-modern", "--duration-ms", duration, flag]),
+                    expected
+                );
+                assert_eq!(
+                    parse(&["--attach-modern", flag, "--duration-ms", duration]),
+                    expected
+                );
+            }
+        }
+    }
+
     #[test]
     fn refuses_unsafe_modes_and_topologies() {
         let mode = Mode::AttachModern { duration_ms: 10 };
