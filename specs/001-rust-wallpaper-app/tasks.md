@@ -47,7 +47,7 @@
 - [X] T014 [P] Define monitor geometry, virtual desktop coordinates (including negative x/y), stable display IDs and per-monitor surface lifetime types in `rust/src/monitor.rs` without changing the C# area-weighted selection rule.
 - [X] T015 [P] Define an object-safe rendering interface with hardware/WARP selection and owned Win32/DXGI handle lifetimes in `rust/src/render/mod.rs`; exclude any alternate GDI+ production renderer.
 - [X] T016 Define the single-threaded application lifecycle and serializable commands (`Start`, `Tick`, `Reload`, `Pause`, `Resume`, `Quit`, `ShellRestart`, `DisplayChanged`) in `rust/src/app_state.rs`, leaving story-specific implementations for later phases.
-- [ ] T017 [P] Define deterministic test doubles (virtual clock, sample sequence, temporary folder catalog, monitor layouts and recording renderer) in `rust/tests/support/mod.rs`, shareable by all five user stories.
+- [X] T017 [P] Define deterministic test doubles (virtual clock, sample sequence, temporary folder catalog, monitor layouts and recording renderer) in `rust/tests/support/mod.rs`, shareable by all five user stories.
 - [ ] T018 Wire the Win32 hidden message-window event loop and safe shutdown skeleton in `rust/src/main.rs` and `rust/src/shell.rs`, with Windows API operations on their intended threads and no system-wide registration side effects.
 - [ ] T019 Run foundational WindowsEnv WARP/WorkerW/UI probes and initial `cargo test`/`cargo clippy` verification, recording commands, outcomes and blockers in `specs/001-rust-wallpaper-app/evidence/foundation-gate.md`; stop for redesign if D3D11 desktop hosting cannot be proven.
 
