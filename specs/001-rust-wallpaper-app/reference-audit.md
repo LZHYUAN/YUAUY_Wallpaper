@@ -54,3 +54,12 @@
 ## 驗證限制
 
 目前證據為 git history、檔案閱讀與純文字有效程式碼比較；未重新執行 C# 舊程式，也未取得使用者歷史動畫畫面或 GPU 實機截圖。這些未驗證事項不得在測試報告中標為已通過。
+
+## T005：凍結的公式與幾何測試資料（2026-11-03）
+
+- 不變的 C# 來源修訂：`ec1af8f8d26061958a19e19e1f66c8c3a41c9f0d`（`master`），只讀取 `git show`，沒有修改歷史分支。`Form1.cs` SHA-256：`f4522420190da27838450462dea0b894fcf00848f9b1ab278d1be345d7b3bc7e`；`ImagePicker.cs` SHA-256：`5bed974efdc9babc837be9af21e51900588ce90d58b4594420b55d03b68c2bb7`。
+- 固定資料：[`rust/tests/fixtures/legacy_reference.json`](../../rust/tests/fixtures/legacy_reference.json)；來源對照及重建／校驗：`python3 rust/tests/fixtures/generate_legacy_reference.py`（預設只校驗，刻意指定 `--write` 才重生）。程式會逐一檢查原版表達式在固定版 C# 是否存在。
+- 凍結項目：`timeA` 雙曲餘弦、四段過場 0.25／0.5／0.75 邊界、`timeB` 的兩段揭露、舊圖 0.2 縮放與 alpha 截斷、隨機位置／旋轉範圍、每 40ms 及 `time += 0.03f` 的歷史節奏、圖片大小比例及各邊 10px 白框、螢幕中心及負座標、螢幕面積權重案例，以及原版 `ImagePicker` 的副檔名、目錄掃描、順序與例外行為。
+- **重要驗證等級**：JSON 中的數值是獨立 Python 計算的 binary32 近似值，**不是**已在 C#／.NET `MathF.Cosh` 實際執行的 Golden 結果；`T031` 必須再以執行中的 .NET 比對，明示誤差容許範圍。所列 0.25、0.5、0.75 邊界是直接取樣，不代表歷史 `time += 0.03f` 迴圈確實走到這些取樣點。
+- C# `Random_NotRepeating` 用固定 `_randomSeed`、`OrderBy(random.Next(count))`，不是 Fisher–Yates，也不在每輪必然刷新；原版缺少路徑去重及解碼錯誤保護。Rust 新版依**已核准規格**採每輪刷新、真正亂序及錯誤安全，但不能將新 ImagePicker 規則誤當成原版數值公式。原版其他螢幕首次尚無圖片時會使用 `lastBmp[i] ??= nextBmp`。
+- 原版 `master` 與 `directx_build` 的內容及分支不變；開場 1＋10 張是另外核准的設計，**不得**據此調整正常輪播公式。

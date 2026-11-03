@@ -1,0 +1,587 @@
+{
+  "constants": {
+    "animation_frame_delay_ms": 40,
+    "normal_progress_step_f32": 0.029999999329447746,
+    "normal_slideshow_delay_ms_debug": 1000,
+    "normal_slideshow_delay_ms_release": 30000,
+    "original_rotation_max_exclusive": 20,
+    "original_rotation_min_inclusive": -20,
+    "original_rrss_f32": 0.20000000298023224,
+    "original_startup_progress_step_f32": 1.0,
+    "original_startup_successful_switches": "monitor_count * 10 + 1 globally (no per-monitor guarantee)",
+    "phase_thresholds": [
+      0.25,
+      0.5,
+      0.75
+    ],
+    "white_border_margin_each_side_pixels": 10,
+    "white_border_total_pixels": 20
+  },
+  "float32_direct_samples": [
+    {
+      "old_cover_alpha_trunc": 2,
+      "old_dx_for_x_100_approx": 1.5419542789459229,
+      "old_dy_for_y_minus_50_approx": -0.7709771394729614,
+      "old_rotation_for_degrees_19_approx": 0.29297131299972534,
+      "old_scale_approx": 0.9969161152839661,
+      "phase": "old_only",
+      "time_a_approx": 0.015419542789459229,
+      "time_input": 0.0,
+      "white_curve_approx": null
+    },
+    {
+      "old_cover_alpha_trunc": 31,
+      "old_dx_for_x_100_approx": 18.22672462463379,
+      "old_dy_for_y_minus_50_approx": -9.113362312316895,
+      "old_rotation_for_degrees_19_approx": 3.4630777835845947,
+      "old_scale_approx": 0.9635465741157532,
+      "phase": "old_only",
+      "time_a_approx": 0.18226724863052368,
+      "time_input": 0.029999999329447746,
+      "white_curve_approx": null
+    },
+    {
+      "old_cover_alpha_trunc": 122,
+      "old_dx_for_x_100_approx": 70.00812530517578,
+      "old_dy_for_y_minus_50_approx": -35.00406265258789,
+      "old_rotation_for_degrees_19_approx": 13.301543235778809,
+      "old_scale_approx": 0.8599837422370911,
+      "phase": "old_only",
+      "time_a_approx": 0.7000812292098999,
+      "time_input": 0.15000000596046448,
+      "white_curve_approx": null
+    },
+    {
+      "old_cover_alpha_trunc": 154,
+      "old_dx_for_x_100_approx": 88.15278625488281,
+      "old_dy_for_y_minus_50_approx": -44.076393127441406,
+      "old_rotation_for_degrees_19_approx": 16.7490291595459,
+      "old_scale_approx": 0.8236944079399109,
+      "phase": "old_only",
+      "time_a_approx": 0.881527841091156,
+      "time_input": 0.24999000132083893,
+      "white_curve_approx": null
+    },
+    {
+      "old_cover_alpha_trunc": 154,
+      "old_dx_for_x_100_approx": 88.15389251708984,
+      "old_dy_for_y_minus_50_approx": -44.07694625854492,
+      "old_rotation_for_degrees_19_approx": 16.749238967895508,
+      "old_scale_approx": 0.8236922025680542,
+      "phase": "white_reveal_only",
+      "time_a_approx": 0.8815389275550842,
+      "time_input": 0.25,
+      "white_curve_approx": 0.0037348719779402018
+    },
+    {
+      "old_cover_alpha_trunc": 157,
+      "old_dx_for_x_100_approx": 90.18147277832031,
+      "old_dy_for_y_minus_50_approx": -45.090736389160156,
+      "old_rotation_for_degrees_19_approx": 17.134479522705078,
+      "old_scale_approx": 0.8196370601654053,
+      "phase": "white_reveal_only",
+      "time_a_approx": 0.9018147587776184,
+      "time_input": 0.27000001072883606,
+      "white_curve_approx": 0.006174096371978521
+    },
+    {
+      "old_cover_alpha_trunc": 173,
+      "old_dx_for_x_100_approx": 98.87439727783203,
+      "old_dy_for_y_minus_50_approx": -49.437198638916016,
+      "old_rotation_for_degrees_19_approx": 18.786134719848633,
+      "old_scale_approx": 0.8022512197494507,
+      "phase": "white_reveal_only",
+      "time_a_approx": 0.9887439608573914,
+      "time_input": 0.49998998641967773,
+      "white_curve_approx": 1.0
+    },
+    {
+      "old_cover_alpha_trunc": 173,
+      "old_dx_for_x_100_approx": 98.87449645996094,
+      "old_dy_for_y_minus_50_approx": -49.43724822998047,
+      "old_rotation_for_degrees_19_approx": 18.78615379333496,
+      "old_scale_approx": 0.8022509813308716,
+      "phase": "new_visible_white_cover_slides",
+      "time_a_approx": 0.9887449741363525,
+      "time_input": 0.5,
+      "white_curve_approx": 0.0
+    },
+    {
+      "old_cover_alpha_trunc": 173,
+      "old_dx_for_x_100_approx": 98.97572326660156,
+      "old_dy_for_y_minus_50_approx": -49.48786163330078,
+      "old_rotation_for_degrees_19_approx": 18.805387496948242,
+      "old_scale_approx": 0.8020485639572144,
+      "phase": "new_visible_white_cover_slides",
+      "time_a_approx": 0.989757239818573,
+      "time_input": 0.5099999904632568,
+      "white_curve_approx": 0.030772268772125244
+    },
+    {
+      "old_cover_alpha_trunc": 174,
+      "old_dx_for_x_100_approx": 99.893310546875,
+      "old_dy_for_y_minus_50_approx": -49.9466552734375,
+      "old_rotation_for_degrees_19_approx": 18.97972869873047,
+      "old_scale_approx": 0.8002133369445801,
+      "phase": "new_visible_white_cover_slides",
+      "time_a_approx": 0.9989331364631653,
+      "time_input": 0.7499899864196777,
+      "white_curve_approx": 0.9962641596794128
+    },
+    {
+      "old_cover_alpha_trunc": 174,
+      "old_dx_for_x_100_approx": 99.89331817626953,
+      "old_dy_for_y_minus_50_approx": -49.946659088134766,
+      "old_rotation_for_degrees_19_approx": 18.9797306060791,
+      "old_scale_approx": 0.8002133369445801,
+      "phase": "new_full",
+      "time_a_approx": 0.9989331960678101,
+      "time_input": 0.75,
+      "white_curve_approx": null
+    },
+    {
+      "old_cover_alpha_trunc": 174,
+      "old_dx_for_x_100_approx": 99.97405242919922,
+      "old_dy_for_y_minus_50_approx": -49.98702621459961,
+      "old_rotation_for_degrees_19_approx": 18.99506950378418,
+      "old_scale_approx": 0.8000518679618835,
+      "phase": "new_full",
+      "time_a_approx": 0.9997405409812927,
+      "time_input": 0.8999999761581421,
+      "white_curve_approx": null
+    },
+    {
+      "old_cover_alpha_trunc": 174,
+      "old_dx_for_x_100_approx": 99.9888916015625,
+      "old_dy_for_y_minus_50_approx": -49.99444580078125,
+      "old_rotation_for_degrees_19_approx": 18.997888565063477,
+      "old_scale_approx": 0.8000222444534302,
+      "phase": "new_full",
+      "time_a_approx": 0.9998888969421387,
+      "time_input": 0.9900000095367432,
+      "white_curve_approx": null
+    },
+    {
+      "old_cover_alpha_trunc": 174,
+      "old_dx_for_x_100_approx": 99.9898910522461,
+      "old_dy_for_y_minus_50_approx": -49.99494552612305,
+      "old_rotation_for_degrees_19_approx": 18.998079299926758,
+      "old_scale_approx": 0.8000202178955078,
+      "phase": "new_full",
+      "time_a_approx": 0.9998989105224609,
+      "time_input": 1.0,
+      "white_curve_approx": null
+    }
+  ],
+  "image_picker_original": {
+    "decode_failure_handling": "No internal catch around Bitmap(File.OpenRead(...)); errors may propagate",
+    "deduplicates_paths": false,
+    "extensions_case_insensitive": [
+      "JFIF",
+      "JPEG",
+      "JPG",
+      "PNG"
+    ],
+    "global_single_picker": true,
+    "new_cycle_can_repeat_prior_order": true,
+    "new_rust_behavior_changes": "approved rescan every completed cycle, fresh unbiased shuffle, deduplicate paths, safe zero/corrupt file handling; do not infer these from master",
+    "on_every_next": "Increment index, wrap at path count; inspect each directory's file count and current file existence; refresh only on change, not on cycle rollover alone",
+    "refresh_sort": "OrderBy(path => random.Next(imagePathsTmp.Count())) with cached tick seed; key ties permitted; not Fisher-Yates",
+    "reset": "Sets index=-1 without scan",
+    "scan_scope": "Directory.GetFiles(folderPath) (top level, nonrecursive)",
+    "single_image": "reused on subsequent index rollovers",
+    "zero_image": "returns null after a scan-dependent check"
+  },
+  "legacy_monitor_state": {
+    "centers": "screen.Bounds.Left + screen.Bounds.Width / 2, similarly top/height, with integer division",
+    "commit_on_success": "lastBmp[nextScreen] = nextBmp; others retain previous bitmap",
+    "fallback": "Other screens without a lastBmp get nextBmp on first successful pick (lastBmp[i] ??= nextBmp)",
+    "negative_origin_supported_by_center_formula": true,
+    "placement_coordinate_caveat": "C# HWndGraphics/virtual desktop origin differences must be verified on Windows; do not assert pixel-perfect negative-origin rendering yet.",
+    "selection": "area-weighted random index from Screen.AllScreens"
+  },
+  "monitor_weight_cases": [
+    {
+      "monitors": [
+        [
+          1920,
+          1080
+        ],
+        [
+          1280,
+          1024
+        ]
+      ],
+      "pixel_areas": [
+        2073600.0,
+        1310720.0
+      ],
+      "selections": [
+        {
+          "draw": 0,
+          "index": 0
+        },
+        {
+          "draw": 0.001,
+          "index": 0
+        },
+        {
+          "draw": 0.1,
+          "index": 0
+        },
+        {
+          "draw": 0.4,
+          "index": 0
+        },
+        {
+          "draw": 0.61,
+          "index": 0
+        },
+        {
+          "draw": 0.8,
+          "index": 1
+        },
+        {
+          "draw": 0.999999,
+          "index": 1
+        }
+      ],
+      "weights": [
+        0.6127080181543116,
+        0.38729198184568836
+      ]
+    },
+    {
+      "monitors": [
+        [
+          1920,
+          1080
+        ]
+      ],
+      "pixel_areas": [
+        2073600.0
+      ],
+      "selections": [
+        {
+          "draw": 0,
+          "index": 0
+        },
+        {
+          "draw": 0.25,
+          "index": 0
+        },
+        {
+          "draw": 0.999999,
+          "index": 0
+        }
+      ],
+      "weights": [
+        1.0
+      ]
+    },
+    {
+      "monitors": [
+        [
+          1920,
+          1080
+        ],
+        [
+          1920,
+          1080
+        ],
+        [
+          2560,
+          1440
+        ]
+      ],
+      "pixel_areas": [
+        2073600.0,
+        2073600.0,
+        3686400.0
+      ],
+      "selections": [
+        {
+          "draw": 0,
+          "index": 0
+        },
+        {
+          "draw": 0.3,
+          "index": 1
+        },
+        {
+          "draw": 0.6,
+          "index": 2
+        },
+        {
+          "draw": 0.95,
+          "index": 2
+        }
+      ],
+      "weights": [
+        0.2647058823529412,
+        0.2647058823529412,
+        0.47058823529411764
+      ]
+    }
+  ],
+  "new_bitmap_geometry_cases": [
+    {
+      "branch": "taller_or_equal",
+      "center": [
+        960,
+        540
+      ],
+      "draw_bounds": [
+        10,
+        10,
+        1536,
+        864
+      ],
+      "framed_bitmap": [
+        1556,
+        884
+      ],
+      "image": [
+        3840,
+        2160
+      ],
+      "image_aspect_f32": 1.7777777910232544,
+      "monitor": {
+        "height": 1080,
+        "left": 0,
+        "top": 0,
+        "width": 1920
+      },
+      "monitor_aspect_f32": 1.7777777910232544,
+      "scale_rsx_approx": 0.8,
+      "white_border_pixels": 10
+    },
+    {
+      "branch": "taller_or_equal",
+      "center": [
+        -960,
+        540
+      ],
+      "draw_bounds": [
+        10,
+        10,
+        656,
+        984
+      ],
+      "framed_bitmap": [
+        676,
+        1004
+      ],
+      "image": [
+        800,
+        1200
+      ],
+      "image_aspect_f32": 0.6666666865348816,
+      "monitor": {
+        "height": 1080,
+        "left": -1920,
+        "top": 0,
+        "width": 1920
+      },
+      "monitor_aspect_f32": 1.7777777910232544,
+      "scale_rsx_approx": 0.9111111164093018,
+      "white_border_pixels": 10
+    },
+    {
+      "branch": "taller_or_equal",
+      "center": [
+        1280,
+        -720
+      ],
+      "draw_bounds": [
+        10,
+        10,
+        1264,
+        1264
+      ],
+      "framed_bitmap": [
+        1284,
+        1284
+      ],
+      "image": [
+        2000,
+        2000
+      ],
+      "image_aspect_f32": 1.0,
+      "monitor": {
+        "height": 1440,
+        "left": 0,
+        "top": -1440,
+        "width": 2560
+      },
+      "monitor_aspect_f32": 1.7777777910232544,
+      "scale_rsx_approx": 0.8777777791023255,
+      "white_border_pixels": 10
+    },
+    {
+      "branch": "taller_or_equal",
+      "center": [
+        -1600,
+        -540
+      ],
+      "draw_bounds": [
+        10,
+        10,
+        1536,
+        864
+      ],
+      "framed_bitmap": [
+        1556,
+        884
+      ],
+      "image": [
+        1920,
+        1080
+      ],
+      "image_aspect_f32": 1.7777777910232544,
+      "monitor": {
+        "height": 1080,
+        "left": -2560,
+        "top": -1080,
+        "width": 1920
+      },
+      "monitor_aspect_f32": 1.7777777910232544,
+      "scale_rsx_approx": 0.8,
+      "white_border_pixels": 10
+    },
+    {
+      "branch": "wider",
+      "center": [
+        2560,
+        512
+      ],
+      "draw_bounds": [
+        10,
+        10,
+        1376,
+        344
+      ],
+      "framed_bitmap": [
+        1396,
+        364
+      ],
+      "image": [
+        4000,
+        1000
+      ],
+      "image_aspect_f32": 4.0,
+      "monitor": {
+        "height": 1024,
+        "left": 1920,
+        "top": 0,
+        "width": 1280
+      },
+      "monitor_aspect_f32": 1.25,
+      "scale_rsx_approx": 1.0750000000000002,
+      "white_border_pixels": 10
+    }
+  ],
+  "normal_loop_time_inputs_f32": [
+    0.0,
+    0.029999999329447746,
+    0.05999999865889549,
+    0.08999999612569809,
+    0.11999999731779099,
+    0.14999999105930328,
+    0.17999999225139618,
+    0.20999999344348907,
+    0.23999999463558197,
+    0.26999998092651367,
+    0.29999998211860657,
+    0.32999998331069946,
+    0.35999998450279236,
+    0.38999998569488525,
+    0.41999998688697815,
+    0.44999998807907104,
+    0.47999998927116394,
+    0.5099999904632568,
+    0.5399999618530273,
+    0.5699999332427979,
+    0.5999999046325684,
+    0.6299998760223389,
+    0.6599998474121094,
+    0.6899998188018799,
+    0.7199997901916504,
+    0.7499997615814209,
+    0.7799997329711914,
+    0.8099997043609619,
+    0.8399996757507324,
+    0.8699996471405029,
+    0.8999996185302734,
+    0.929999589920044,
+    0.9599995613098145,
+    0.989999532699585
+  ],
+  "numeric_provenance": {
+    "method": "Python math.cosh rounded to binary32 with struct.pack/unpack at C#-style intermediate steps",
+    "samples_are_direct_times": "Some sample times (including exactly 0.25 and 0.5) are branch-edge tests, not values visited by the source's float32 += 0.03 loop.",
+    "status": "independent approximation, not C# runtime golden",
+    "tolerance_pending": "T031 must compare actual .NET MathF.Cosh and agree explicit numeric tolerance"
+  },
+  "phase_logic": [
+    {
+      "effect": "old image transform, no new image visible",
+      "range": "t < 0.25"
+    },
+    {
+      "effect": "new white vertical reveal mask, timeB = 1 / cosh((4t-2)*2pi)",
+      "range": "0.25 <= t < 0.5"
+    },
+    {
+      "effect": "new image beneath moving white mask, timeB = 1 - 1 / cosh((4t-2)*2pi)",
+      "range": "0.5 <= t < 0.75"
+    },
+    {
+      "effect": "new image fully displayed",
+      "range": "t >= 0.75"
+    }
+  ],
+  "random_position_contract": {
+    "if_initial_x_below": "screenWidth * 0.2",
+    "initial_x_draw": "Random.Next((int)(screenWidth * 0.4))",
+    "not_seeded_here": "Exact System.Random seed/permutation requires matching .NET version; this fixture tests fixed draws, not the RNG implementation.",
+    "rotation": "Random.Next(-20, 20)",
+    "same_for_y": true,
+    "then_subtract_f32": "screenWidth * 0.4f"
+  },
+  "schema_version": 1,
+  "source": {
+    "branch": "master",
+    "commit": "ec1af8f8d26061958a19e19e1f66c8c3a41c9f0d",
+    "files": {
+      "YUAUY_Wallpaper/Form1.cs": {
+        "sha256": "f4522420190da27838450462dea0b894fcf00848f9b1ab278d1be345d7b3bc7e"
+      },
+      "YUAUY_Wallpaper/Image/ImagePicker.cs": {
+        "sha256": "5bed974efdc9babc837be9af21e51900588ce90d58b4594420b55d03b68c2bb7"
+      }
+    },
+    "method": "source extraction; C# executable was not run"
+  },
+  "verbatim_csharp_expressions": {
+    "area_selection": "s = s.Select(size => size / s.Sum()).ToArray();",
+    "frame_delay": "int delay = 40;",
+    "image_aspect": "var irs = (float)img.Width / img.Height;",
+    "image_scale": "var rsx = Math.Abs(irs - srs) * 0.1 + 0.8;",
+    "old_alpha": "brushA.Color = Color.FromArgb((int)(timeA * 175), 0, 0, 0);",
+    "old_scale": "var rrsst = 1 - rrss * timeA;",
+    "picker_extensions": "SupportFiles.Contains(path.ToUpper().Split('.')[^1])",
+    "picker_rescan": "_lastFileCount != ImageFolderList.Sum(path => Directory.GetFiles(path).Length)",
+    "picker_sequence": "if (_index >= _imagePaths.Length) _index = 0;",
+    "picker_shuffle": "imagePathsTmp = imagePathsTmp.OrderBy(path => random2.Next(imagePathsTmp.Count()));",
+    "picker_zero_image": "return null;",
+    "random_rotation": "var r = random.Next(-20, 20);",
+    "random_x": "float x = random.Next((int)(Screen.AllScreens[nextScreen].Bounds.Width * 0.4));",
+    "screen_aspect": "var srs = (float)Screen.AllScreens[nextScreen].Bounds.Width / Screen.AllScreens[nextScreen].Bounds.Height;",
+    "screen_choice": "st -= t;",
+    "time_a": "float timeA = 1 - 1.2f / MathF.Cosh(time * 3f * MathF.PI + 0.65f);",
+    "time_step": "time += first ? 1 : 0.03f",
+    "white_reveal_a": "timeB = 1 / MathF.Cosh((timeB - 1) * 2f * MathF.PI);",
+    "white_reveal_b": "timeB = 1 - 1 / MathF.Cosh(timeB * 2f * MathF.PI);"
+  }
+}
