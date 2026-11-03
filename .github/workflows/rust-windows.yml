@@ -87,6 +87,24 @@ jobs:
           if ($LASTEXITCODE -ne 0) {
             throw 'Hidden Win32 smoke failed to create, tick, or destroy its own HWND.'
           }
+      - name: Read-only Windows foundation inventory and API probes (hosted runner only)
+        run: |
+          & .\scripts\foundation-inventory.ps1 -ProbeDirectory .\target\x86_64-pc-windows-msvc\release -RunReadOnlyProbes
+          if ($LASTEXITCODE -ne 0) {
+            throw 'Foundation inventory or a safe API probe reported an unexpected failure.'
+          }
+      - name: Upload foundation probes for explicit WindowsEnv acceptance (NOT a production release)
+        uses: actions/upload-artifact@v4
+        with:
+          name: yuauy-foundation-probes-windows-x64
+          retention-days: 3
+          if-no-files-found: error
+          path: |
+            rust/target/x86_64-pc-windows-msvc/release/probe_d3d11.exe
+            rust/target/x86_64-pc-windows-msvc/release/probe_workerw.exe
+            rust/target/x86_64-pc-windows-msvc/release/probe_pacing.exe
+            rust/target/x86_64-pc-windows-msvc/release/probe_usage.exe
+            rust/scripts/foundation-inventory.ps1
       - name: Deterministic tests (no desktop or hardware side effects)
         run: cargo test --locked --target x86_64-pc-windows-msvc
       - name: Record separate Windows acceptance gates

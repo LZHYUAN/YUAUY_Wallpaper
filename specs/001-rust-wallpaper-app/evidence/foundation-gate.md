@@ -27,3 +27,17 @@ The following measurements distinguish *hosted Windows CI*, *Hermes Linux cross-
 No untouched C# branch was modified, no real user photo paths were used, and unrelated `.specify` or `.agents` local work has not been committed.
 
 **2026-11-04:** T009 probing strategy now distinguishes `WS_EX_NOREDIRECTIONBITMAP` raised desktops from legacy WorkerW hosting. The modern test is explicitly opt-in, bounded and restores its own HWND; the actual 25H2 desktop validation gate remains BLOCKED.
+
+## Portable, read-only WindowsEnv acceptance bundle (2026-11-04)
+
+The Windows CI workflow now uploads a short-lived (3-day retention) **non-production** artifact named `yuauy-foundation-probes-windows-x64`, containing only the four compiled diagnostic EXEs and `rust/scripts/foundation-inventory.ps1` — no user YAML, private pictures, logs or production wallpaper executable. The artifact is not a substitute for actual WindowsEnv execution.
+
+`foundation-inventory.ps1` defaults to read-only OS/architecture and Rust/MSVC/SDK **presence checks**. Only `-RunReadOnlyProbes` additionally runs `probe_d3d11.exe --warp`, `probe_workerw.exe --inspect` and bounded `probe_usage.exe --metric cpu_total`; it never requests Explorer attachment, GPU calibration or a display mode change. **No `--attach` or `--attach-modern` is executed by CI or this script.**
+
+When a trusted non-focus-stealing WindowsEnv PowerShell route exists, extract the artifact to a dedicated test directory and run:
+
+```powershell
+.\scripts\foundation-inventory.ps1 -ProbeDirectory .\target\x86_64-pc-windows-msvc\release -RunReadOnlyProbes
+```
+
+The exact path depends on artifact extraction layout. Save the redacted console output, identify machine class **WindowsEnv** versus **GitHub hosted runner**, then run WorkerW visual `--attach-modern` separately only in a supervised test session. A probe that says SKIPPED does not count as PASS.
