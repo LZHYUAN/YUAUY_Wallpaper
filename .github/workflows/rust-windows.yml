@@ -112,6 +112,7 @@ jobs:
             rust/target/x86_64-pc-windows-msvc/release/probe_d3d11.exe
             rust/target/x86_64-pc-windows-msvc/release/probe_workerw.exe
             rust/target/x86_64-pc-windows-msvc/release/probe_desktop_d3d11.exe
+            rust/target/x86_64-pc-windows-msvc/release/probe_win32_window.exe
             rust/target/x86_64-pc-windows-msvc/release/probe_pacing.exe
             rust/target/x86_64-pc-windows-msvc/release/probe_usage.exe
             rust/scripts/foundation-inventory.ps1
