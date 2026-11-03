@@ -55,3 +55,50 @@ A separate read-only/reversible PowerShell C# P/Invoke diagnostic created/destro
 **Root-cause hypothesis grounded in Microsoft docs:** [Microsoft Using Windows](https://learn.microsoft.com/en-us/windows/win32/winmsg/using-windows) states that `WS_EX_LAYERED` child windows require a Windows 8-aware **application manifest**. [Microsoft Application (executable) manifest](https://learn.microsoft.com/en-us/windows/compatibility/application-executable-manifest) documents that an unmanifested EXE receives legacy Windows Vista compatibility behavior even on newer OS versions. The Rust crate did not embed a supportedOS manifest, unlike PowerShell/.NET.
 
 Added `rust/assets/windows-app.manifest` with official Windows 8, 8.1 and Windows 10/11 supportedOS GUIDs and `asInvoker/uiAccess=false`; `rust/build.rs` passes `/MANIFEST:EMBED` and `/MANIFESTINPUT` to MSVC LINK for every Windows binary. This requires a **new Windows MSVC build and actual WindowsEnv retest**, including visual evidence; do not mark T009/T019 complete based on compilation alone.
+
+## Final WindowsEnv manifest-enabled D3D11 runtime findings (2026-11-04)
+
+### Root cause fixed: Windows manifest for layered child HWND
+
+The Windows CI release artifact for commit `163df7a86d3ce96df0ef6132ce14e127945aef5a` was downloaded to the same WindowsEnv, and the executable's SHA-256 was verified. `probe_win32_window.exe` SHA-256 was `696bba49f698ef6ef7045432f1c759ee9fc31034e2ea60036f0ca996e0a670b2`, and the manifest-enabled `probe_desktop_d3d11.exe` SHA-256 was `767f5603d6628f3fd7b1fc433be6775e89ad0932e98b572c9a2b8ef7e3034fdf`.
+
+The native WindowsEnv diagnostic now reported **PASS for all** independent cases: `own_top_level`, `simple_child`, `layered_only`, `transparent_only`, `noactivate_only`, `layered_and_transparent`, `layered_and_noactivate`, `layered_child_no_disabled`, and `layered_child`, each with `valid=true last_error=0`. Before the Manifest change the same Rust `layered_child` test returned Win32 error 87. **This confirms the executable compatibility-manifest fix on WindowsEnv** rather than merely on hosted CI.
+
+### Real WARP rendering to a child of Progman
+
+Executed on WindowsEnv:
+
+```powershell
+& "$env:TEMP\YUAUY-Win25-Probes\target\x86_64-pc-windows-msvc\release\probe_desktop_d3d11.exe" --attach-modern --duration-ms 10000
+```
+
+The result file reported (exact fields):
+
+```text
+PASS driver=warp feature_level=0xb000 direct3d_present=true last_present_hresult=0x00000000 frames=125 progman_layered_child=true behind_defview_zorder=true child_was_visible=true destroyed=true duration_ms=10000 visual_icon_occlusion=REQUIRES_SCREENSHOT
+```
+
+The **125 successful Direct3D11 WARP Clear/Present submissions** and the `Progman` child HWND / `SHELLDLL_DefView` z-order read-back are native WindowsEnv measurements, not only CI. Cleanup checked `IsWindow` false after the 10-second window lifetime. The same program run from a hidden PowerShell host also returned PASS without a covering console.
+
+### Independent CUA image comparison — visible desktop FAIL
+
+The full-resolution WindowsEnv 1920×1080 desktop capture was taken **during** a hidden-console test run. Windows Task Manager independently showed the `probe_desktop_d3d11.exe` process running at the time of one capture. Image analysis of the intended **x=12..231, y=12..201** test region (220×190 pixels) compared the baseline image with two capture frames and a post-cleanup frame.
+
+| Snapshot | SHA-256 of private PNG | Changed pixels with channel delta >30 | Lime-green pixels |
+| --- | --- | --- | --- |
+| Baseline | `523893c79e2fdbdcf2ff8a271fd83faf57d656afa2e79f6f9a92da4d50d4195b` | 0 | 95 |
+| D3D11 running #1 | `6e2f13eeca0fd7a6798b3a02d1b9f5fd67fd851effbd19cfe0148700c62bc79a` | **0** | 95 |
+| D3D11 running #2 | `76e030392bd0be0690c6b21fab9390fe0422765cb431519defd93d330b6e93a9` | **0** | 95 |
+| After cleanup | `65469ec7ab5b377a80279ee0c12f29d8122d2fa90ef01a9a1f1aa26227ce8823` | **0** | 95 |
+
+The expected **bright green D3D11 image was not visible** in this region. The region bytes matched exactly across all four screenshots despite successful Present calls and correct HWND z-order. The screenshots contain the user's desktop and are held **privately, Git-ignored** in `rust/target/private-evidence/windowsenv-25h2/`; **no PNG screenshot was committed**.
+
+A supplemental short-lived test moved **only the probe-owned child HWND** above the icon view; native code reported `SetWindowPos=True` and `above_defview=True`, while its 125 Present calls still succeeded. The available screenshot did not conclusively capture the program while it was in that above-icon position; therefore **do not assert an above/below visual comparison PASS**. The separate GDI marker control also did not yield a conclusive *live* visual, so there is not enough evidence yet to distinguish an opaque DefView surface from unsupported DXGI-to-layered-child composition.
+
+### Verdict and cleanup
+
+**PASS:** Windows 11 25H2 WARP device/swapchain/render-target/Present; manifest-enabled layered child HWND; same Progman/DefView owner; correct sibling z-order; repeatable process-owned HWND cleanup.
+
+**FAIL / NOT VERIFIED:** **the Direct3D11 image did not become visible behind Windows desktop icons** under the current legacy `D3D11CreateDeviceAndSwapChain` + `WS_EX_LAYERED` Progman child design. The app's visible-wallpaper hosting feasibility is **not proven**. Do not mark T009 or T019 complete.
+
+**Next technical investigation:** test DXGI flip-model/`CreateSwapChainForHwnd` or DirectComposition's `CreateSwapChainForComposition` hosted in a suitably constructed child; capture *running, visible* A/B screenshots to distinguish icon view opacity from swap-chain composition. Keep existing Explorer HWNDs untouched and reset only owned diagnostic HWNDs. No `master`/C# formula modifications or permanent system changes occurred.

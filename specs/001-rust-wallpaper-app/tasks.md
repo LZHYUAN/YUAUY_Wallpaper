@@ -38,7 +38,7 @@
 
 **Purpose**: Prove the Windows APIs and shared seams before committing production behavior. A failed probe is a design blocker, not permission to replace the C# formulas or silently abandon DirectX.
 
-- [ ] T008 Build/run a D3D11 device-creation and clear/present probe in `rust/src/bin/probe_d3d11.rs`, explicitly testing WARP on WindowsEnv, distinguishing hardware/WARP driver type, and recording real output in `specs/001-rust-wallpaper-app/evidence/d3d11-warp.md`.
+- [X] T008 Build/run a D3D11 device-creation and clear/present probe in `rust/src/bin/probe_d3d11.rs`, explicitly testing WARP on WindowsEnv, distinguishing hardware/WARP driver type, and recording real output in `specs/001-rust-wallpaper-app/evidence/d3d11-warp.md`.
 - [ ] T009 Implement a minimal reversible WorkerW/desktop-host probe in `rust/src/bin/probe_workerw.rs` and record whether the surface stays behind desktop icons on WindowsEnv in `specs/001-rust-wallpaper-app/evidence/workerw.md`; restore original desktop state after each probe.
 - [ ] T010 [P] Build a dedicated timing/VSync + `max_fps` probe in `rust/src/bin/probe_pacing.rs` that logs actual frame submission times on available outputs, checks 60/120/144/240Hz with caps 60/120/240 when available, and writes measured/unsupported cases to `specs/001-rust-wallpaper-app/evidence/vsync-probe.md`.
 - [X] T011 [P] Probe quick bounded one-shot system-wide CPU and GPU utilization APIs (without idle monitoring or long calibration) in `rust/src/bin/probe_usage.rs`; document available counters, time cost, CPU fallback and missing GPU cases in `specs/001-rust-wallpaper-app/evidence/load-probe.md`.

@@ -79,3 +79,7 @@ SKIPPED: WorkerW child of Progman absent; no shell message sent
 ```
 
 The CI runner did not have an eligible desktop WorkerW. **Neither `--attach` nor `--attach-modern` was executed.** The modern path is confirmed to compile for Windows MSVC and its pure policy tests pass, but on-screen composition, icon occlusion and cleanup after *actual* attachment on WindowsEnv are still **UNVERIFIED**. T009 remains unchecked.
+
+## Actual WindowsEnv 25H2 rendered-host acceptance: NOT VISIBLE (2026-11-04)
+
+After embedding a Windows 8+/Windows 11-compatible application Manifest, the program successfully created its own **WS_EX_LAYERED Progman child** and verified it sat immediately below the actual `SHELLDLL_DefView`. A Direct3D11 WARP swap chain ran **125 successful Present calls** (HRESULT `0x00000000`) over 10 seconds, and `IsWindow` verified its owned HWND destroyed afterward. Nevertheless, two independent full-resolution desktop captures **while it ran** were pixel-identical to the baseline inside the 220×190 green test region (**0 changed pixels**). Thus the WorkerW/Progman **behind-icon visual criterion FAILS with this renderer**, even though HWND creation and ordering now pass. T009 and T019 must remain unchecked; see `windowsenv-d3d11-visual.md` for SHA-256 capture evidence, precise results and alternative DXGI/DirectComposition investigation.

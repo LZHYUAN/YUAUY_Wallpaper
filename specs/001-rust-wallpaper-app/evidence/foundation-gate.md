@@ -59,3 +59,11 @@ VERDICT diagnostics_only=true desktop_layering=UNVERIFIED production_wallpaper=U
 **Environment distinction:** `10.0.26100.0` above is the **GitHub hosted Windows runner**, not the user's WindowsEnv CUA OS build `10.0.26200.9711`. The runner's `cl_in_path=False` does not mean the compiler is absent, since the separately detected Visual Studio C++ workload and Windows CI build succeeded. None of this establishes which tools are installed inside WindowsEnv.
 
 The Actions run uploaded one checked `yuauy-foundation-probes-windows-x64` artifact (artifact ID `13252888438`, size `348854` bytes, expiry `2026-11-06T17:13:50Z`; user download via the workflow run page). It contains the four probe executables and the read-only inventory script, **not** the product executable, personal images or configuration. The verified bundle can be transferred into WindowsEnv when a safe command/file route exists; it **has not** been executed on that target. T006, T008, T009, T010 and T019 therefore remain unchecked.
+
+## Native WindowsEnv 25H2 foundation gate result (2026-11-04)
+
+T008 **PASS**: WindowsEnv build 26200.9711 successfully created a WARP Direct3D11 device and swap chain, cleared/presented with HRESULT 0, feature level 11.0 (23ms diagnostic). The Windows-compatible Manifest fix was also verified on this target: `WS_EX_LAYERED` child creation changed from Win32 error 87 to PASS.
+
+However, T009/T019 **FAIL TO SATISFY VISIBLE DESKTOP HOSTING**: a child of raised-desktop `Progman` verified beneath `SHELLDLL_DefView` ran 125 Direct3D11 Present calls with successful HRESULT and no leaked HWND, yet two screenshots captured during the test showed **0 pixel changes** within the intended 220×190 green image area. A successful API result cannot substitute for actual wallpaper display. **Phase 2 remains blocked** pending an alternate compositor or HWND/swap-chain approach, with new dedicated `evidence/windowsenv-d3d11-visual.md` recording the private screenshot SHA-256 and results.
+
+WindowsEnv did **not** require installing Rust or modifying registry, Explorer shell windows or display modes. The original C# formula and historical branches remain untouched.
