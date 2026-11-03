@@ -26,6 +26,7 @@ impl ZLayer {
 struct ProbeArgs {
     mode: Mode,
     layer: ZLayer,
+    layered_alpha: Option<u8>,
 }
 
 fn options(args: impl IntoIterator<Item = String>) -> Result<ProbeArgs, &'static str> {
@@ -38,12 +39,28 @@ fn options(args: impl IntoIterator<Item = String>) -> Result<ProbeArgs, &'static
     } else {
         ZLayer::BelowDefView
     };
+    let layered_alpha = if args.len() >= 2 && args[args.len() - 2] == "--layered-alpha" {
+        let value = args.pop().ok_or("missing layered alpha value")?;
+        args.pop();
+        match value.as_str() {
+            "0" => Some(0),
+            "128" => Some(128),
+            "255" => Some(255),
+            _ => return Err("--layered-alpha must be 0, 128, or 255"),
+        }
+    } else {
+        None
+    };
     match parse_args(args)? {
         Mode::Attach { .. } => Err("legacy --attach is forbidden; use --attach-modern"),
-        Mode::Inspect if layer == ZLayer::AboveDefView => {
-            Err("--above-icon-view requires explicit --attach-modern")
+        Mode::Inspect if layer == ZLayer::AboveDefView || layered_alpha.is_some() => {
+            Err("diagnostic flags require explicit --attach-modern")
         }
-        mode => Ok(ProbeArgs { mode, layer }),
+        mode => Ok(ProbeArgs {
+            mode,
+            layer,
+            layered_alpha,
+        }),
     }
 }
 
@@ -75,7 +92,7 @@ fn main() -> std::process::ExitCode {
         Ok(mode) => mode,
         Err(message) => {
             eprintln!(
-                "REFUSED {message}; use --inspect or --attach-modern [--duration-ms 1..10000] [--above-icon-view]"
+                "REFUSED {message}; use --inspect or --attach-modern [--duration-ms 1..10000] [--layered-alpha 0|128|255] [--above-icon-view]"
             );
             return std::process::ExitCode::FAILURE;
         }
@@ -107,7 +124,7 @@ mod probe {
     };
     use windows::{
         Win32::{
-            Foundation::{HMODULE, HWND},
+            Foundation::{COLORREF, HMODULE, HWND},
             Graphics::{
                 Direct3D::{D3D_DRIVER_TYPE_WARP, D3D_FEATURE_LEVEL},
                 Direct3D11::{
@@ -131,10 +148,12 @@ mod probe {
             System::Com::{COINIT_APARTMENTTHREADED, CoInitializeEx, CoUninitialize},
             UI::WindowsAndMessaging::{
                 CreateWindowExW, DestroyWindow, DispatchMessageW, FindWindowExW, FindWindowW,
-                GW_HWNDNEXT, GWL_EXSTYLE, GetParent, GetShellWindow, GetWindow, GetWindowLongW,
-                GetWindowRect, GetWindowThreadProcessId, HWND_TOP, IsWindow, IsWindowVisible, MSG,
-                PM_REMOVE, PeekMessageW, SWP_NOACTIVATE, SWP_SHOWWINDOW, SetWindowPos,
-                TranslateMessage, WS_CHILD, WS_CLIPSIBLINGS, WS_DISABLED, WS_EX_NOACTIVATE,
+                GW_HWNDNEXT, GWL_EXSTYLE, GetLayeredWindowAttributes, GetParent, GetShellWindow,
+                GetWindow, GetWindowLongW, GetWindowRect, GetWindowThreadProcessId, HWND_TOP,
+                IsWindow, IsWindowVisible, LAYERED_WINDOW_ATTRIBUTES_FLAGS, LWA_ALPHA, MSG,
+                PM_REMOVE, PeekMessageW, SWP_NOACTIVATE, SWP_SHOWWINDOW,
+                SetLayeredWindowAttributes, SetWindowPos, TranslateMessage, WS_CHILD,
+                WS_CLIPSIBLINGS, WS_DISABLED, WS_EX_LAYERED, WS_EX_NOACTIVATE,
                 WS_EX_NOREDIRECTIONBITMAP, WS_EX_TRANSPARENT,
             },
         },
@@ -286,6 +305,7 @@ mod probe {
     pub(super) fn run(args: ProbeArgs) -> Result<String, Outcome> {
         let mode = args.mode;
         let layer = args.layer;
+        let layered_alpha = args.layered_alpha;
         let host = inspect()?;
         if mode == Mode::Inspect {
             return Ok(format!(
@@ -314,11 +334,18 @@ mod probe {
             .map_err(|e| failure("CoInitializeEx", e))?;
         let _apartment = Apartment;
         validate(&host, mode)?;
-        // Hidden until the composition tree is ready. No WS_EX_LAYERED/GDI path:
-        // the owned child supplies its pixels exclusively through DirectComposition.
+        // Hidden until the composition tree is ready. Layered mode intentionally
+        // omits NOREDIRECTIONBITMAP and retains the same DComp WARP visual.
+        let exstyle = WS_EX_NOACTIVATE
+            | WS_EX_TRANSPARENT
+            | if layered_alpha.is_some() {
+                WS_EX_LAYERED
+            } else {
+                WS_EX_NOREDIRECTIONBITMAP
+            };
         let hwnd = unsafe {
             CreateWindowExW(
-                WS_EX_NOREDIRECTIONBITMAP | WS_EX_NOACTIVATE | WS_EX_TRANSPARENT,
+                exstyle,
                 w!("STATIC"),
                 w!("YUAUY DComp WARP diagnostic"),
                 WS_CHILD | WS_CLIPSIBLINGS | WS_DISABLED,
@@ -334,6 +361,26 @@ mod probe {
         }
         .map_err(|e| failure("CreateWindowExW", e))?;
         let mut child = OwnedChild(hwnd);
+        let mut layered_readback = "none".to_owned();
+        if let Some(alpha) = layered_alpha {
+            // Only configure OUR own HWND. Layered children require an explicit
+            // opacity/update call before being made visible.
+            unsafe { SetLayeredWindowAttributes(hwnd, COLORREF(0), alpha, LWA_ALPHA) }
+                .map_err(|e| failure("SetLayeredWindowAttributes_owned_child", e))?;
+            let mut read_alpha = 0u8;
+            let mut read_flags = LAYERED_WINDOW_ATTRIBUTES_FLAGS::default();
+            unsafe {
+                GetLayeredWindowAttributes(hwnd, None, Some(&mut read_alpha), Some(&mut read_flags))
+            }
+            .map_err(|e| failure("GetLayeredWindowAttributes_owned_child", e))?;
+            if read_alpha != alpha || read_flags != LWA_ALPHA {
+                return Err(Outcome::Fail(format!(
+                    "owned_layered_readback_mismatch requested={alpha} read={read_alpha} flags=0x{:x}",
+                    read_flags.0
+                )));
+            }
+            layered_readback = format!("alpha={alpha} flags=0x{:x}", read_flags.0);
+        }
         let mut device: Option<ID3D11Device> = None;
         let mut context: Option<ID3D11DeviceContext> = None;
         let mut level = D3D_FEATURE_LEVEL::default();
@@ -479,8 +526,9 @@ mod probe {
             )));
         }
         Ok(format!(
-            "API_SUBMISSIONS_ONLY path=dcomp_composition_flip_sequential placement={} driver=warp feature_level=0x{:x} present_s_ok={frames} busy={busy} last_present_hresult=0x{last_hr:08x} duration_ms={duration_ms} sibling_order_verified=true child_destroyed=true visual_wallpaper=UNVERIFIED requires_live_screenshot=true",
+            "API_SUBMISSIONS_ONLY path=dcomp_composition_flip_sequential placement={} layered={} driver=warp feature_level=0x{:x} present_s_ok={frames} busy={busy} last_present_hresult=0x{last_hr:08x} duration_ms={duration_ms} sibling_order_verified=true child_destroyed=true visual_wallpaper=UNVERIFIED requires_live_screenshot=true",
             layer.name(),
+            layered_readback,
             level.0
         ))
     }
@@ -507,21 +555,24 @@ mod tests {
             parse(&[]),
             Ok(ProbeArgs {
                 mode: Mode::Inspect,
-                layer: ZLayer::BelowDefView
+                layer: ZLayer::BelowDefView,
+                layered_alpha: None
             })
         );
         assert_eq!(
             parse(&["--inspect"]),
             Ok(ProbeArgs {
                 mode: Mode::Inspect,
-                layer: ZLayer::BelowDefView
+                layer: ZLayer::BelowDefView,
+                layered_alpha: None
             })
         );
         assert_eq!(
             parse(&["--attach-modern"]),
             Ok(ProbeArgs {
                 mode: Mode::AttachModern { duration_ms: 3000 },
-                layer: ZLayer::BelowDefView
+                layer: ZLayer::BelowDefView,
+                layered_alpha: None
             })
         );
         assert_eq!(
@@ -533,7 +584,37 @@ mod tests {
             ]),
             Ok(ProbeArgs {
                 mode: Mode::AttachModern { duration_ms: 5000 },
-                layer: ZLayer::AboveDefView
+                layer: ZLayer::AboveDefView,
+                layered_alpha: None
+            })
+        );
+        for alpha in ["0", "128", "255"] {
+            assert_eq!(
+                parse(&[
+                    "--attach-modern",
+                    "--duration-ms",
+                    "100",
+                    "--layered-alpha",
+                    alpha
+                ]),
+                Ok(ProbeArgs {
+                    mode: Mode::AttachModern { duration_ms: 100 },
+                    layer: ZLayer::BelowDefView,
+                    layered_alpha: Some(alpha.parse::<u8>().unwrap()),
+                })
+            );
+        }
+        assert_eq!(
+            parse(&[
+                "--attach-modern",
+                "--layered-alpha",
+                "128",
+                "--above-icon-view"
+            ]),
+            Ok(ProbeArgs {
+                mode: Mode::AttachModern { duration_ms: 3000 },
+                layer: ZLayer::AboveDefView,
+                layered_alpha: Some(128),
             })
         );
         for duration in ["1", "10000"] {
@@ -547,6 +628,18 @@ mod tests {
             vec!["--attach-modern", "--request-workerw"],
             vec!["--attach-modern", "--attach-modern"],
             vec!["--inspect", "--above-icon-view"],
+            vec!["--inspect", "--layered-alpha", "255"],
+            vec!["--layered-alpha", "255"],
+            vec!["--attach-modern", "--layered-alpha", "1"],
+            vec!["--attach-modern", "--layered-alpha", "127"],
+            vec!["--attach-modern", "--layered-alpha", "256"],
+            vec![
+                "--attach-modern",
+                "--layered-alpha",
+                "255",
+                "--layered-alpha",
+                "255",
+            ],
             vec!["--above-icon-view"],
             vec![
                 "--attach-modern",
