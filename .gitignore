@@ -379,3 +379,7 @@ FodyWeavers.xsd
 /rust/screenshots/
 /rust/private-logs/
 /specs/001-rust-wallpaper-app/evidence/private/
+
+# Keep Rust probe source directories tracked despite legacy C# [Bb]in/ ignore
+!/rust/src/bin/
+!/rust/src/bin/*.rs
