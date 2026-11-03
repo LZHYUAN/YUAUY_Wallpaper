@@ -23,7 +23,7 @@
 **Purpose**: Create a separate Rust project, establish a reproducible Windows target and freeze legacy references without touching historical branches.
 
 - [X] T001 Initialize the Rust Windows application/library skeleton at `rust/Cargo.toml`, `rust/src/main.rs`, `rust/src/lib.rs` and `rust/rust-toolchain.toml`, targeting `x86_64-pc-windows-msvc`; retain all C# files untouched.
-- [ ] T002 Declare and lock the audited `windows` crate Win32/D3D11/DXGI/WIC features and maintained Serde YAML, RNG and test dependencies in `rust/Cargo.toml` and `rust/Cargo.lock`, preserving the owner-approved Windows 11 baseline.
+- [X] T002 Declare and lock the audited `windows` crate Win32/D3D11/DXGI/WIC features and maintained Serde YAML, RNG and test dependencies in `rust/Cargo.toml` and `rust/Cargo.lock`, preserving the owner-approved Windows 11 baseline.
 - [X] T003 [P] Add Windows Rust format, lint, build and test CI checks in `.github/workflows/rust-windows.yml`, working only under `rust/` and clearly separating hardware-only tests.
 - [X] T004 [P] Update `.gitignore` for `rust/target/`, user YAML, image collections, screenshots and private Windows logs without ignoring tracked examples in `specs/001-rust-wallpaper-app/contracts/config.example.yaml`.
 - [ ] T005 [P] Extract immutable C# equation/geometry/phase constants and image-selection behavior from `master:YUAUY_Wallpaper/Form1.cs` and `master:YUAUY_Wallpaper/Image/ImagePicker.cs` into `rust/tests/fixtures/legacy_reference.json`, recording source revision and calculation assumptions in `specs/001-rust-wallpaper-app/reference-audit.md`; no easing substitutions.
