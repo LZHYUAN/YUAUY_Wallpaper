@@ -47,6 +47,15 @@ jobs:
           if ($LASTEXITCODE -ne 0) {
             throw 'WARP smoke failed on this GitHub Actions runner (not WindowsEnv).'
           }
+      - name: DXGI Present(1) pacing diagnostic (hosted runner only)
+        continue-on-error: true
+        run: |
+          & .\target\x86_64-pc-windows-msvc\release\probe_pacing.exe --driver warp --max-fps 120 --frames 12
+          if ($LASTEXITCODE -ne 0) {
+            "Pacing runtime SKIPPED/FAIL: hosted runner lacks a verified display; see logs. WindowsEnv and real display validation pending." >> $env:GITHUB_STEP_SUMMARY
+          } else {
+            "Pacing Present(1) diagnostic ran on a hidden window. Real VSync and output rate still NOT verified." >> $env:GITHUB_STEP_SUMMARY
+          }
       - name: WorkerW topology read-only smoke (GitHub runner only)
         run: |
           & .\target\x86_64-pc-windows-msvc\release\probe_workerw.exe --inspect
