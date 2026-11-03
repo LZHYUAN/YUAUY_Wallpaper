@@ -102,6 +102,15 @@ jobs:
           }
           if ($LASTEXITCODE -ne 0) { throw 'Read-only D3D11 desktop probe failed' }
           "D3D11 read-only topology valid; visual attachment NOT executed in hosted CI." >> $env:GITHUB_STEP_SUMMARY
+      - name: DirectComposition desktop read-only inspection (hosted runner only)
+        run: |
+          & .\target\x86_64-pc-windows-msvc\release\probe_desktop_dcomp.exe --inspect
+          if ($LASTEXITCODE -eq 2) {
+            "DirectComposition inspection SKIPPED: no supported Explorer topology." >> $env:GITHUB_STEP_SUMMARY
+            exit 0
+          }
+          if ($LASTEXITCODE -ne 0) { throw 'Read-only DirectComposition probe failed' }
+          "DirectComposition inspected only; composition APIs and visible wallpaper remain unverified." >> $env:GITHUB_STEP_SUMMARY
       - name: Windows compatibility manifest and layered-child creation smoke
         continue-on-error: true
         run: |
@@ -122,6 +131,7 @@ jobs:
             rust/target/x86_64-pc-windows-msvc/release/probe_d3d11.exe
             rust/target/x86_64-pc-windows-msvc/release/probe_workerw.exe
             rust/target/x86_64-pc-windows-msvc/release/probe_desktop_d3d11.exe
+            rust/target/x86_64-pc-windows-msvc/release/probe_desktop_dcomp.exe
             rust/target/x86_64-pc-windows-msvc/release/probe_win32_window.exe
             rust/target/x86_64-pc-windows-msvc/release/probe_pacing.exe
             rust/target/x86_64-pc-windows-msvc/release/probe_usage.exe
