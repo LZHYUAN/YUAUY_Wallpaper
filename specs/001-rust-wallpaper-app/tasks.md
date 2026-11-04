@@ -39,7 +39,7 @@
 **Purpose**: Prove the Windows APIs and shared seams before committing production behavior. A failed probe is a design blocker, not permission to replace the C# formulas or silently abandon DirectX.
 
 - [X] T008 Build/run a D3D11 device-creation and clear/present probe in `rust/src/bin/probe_d3d11.rs`, explicitly testing WARP on WindowsEnv, distinguishing hardware/WARP driver type, and recording real output in `specs/001-rust-wallpaper-app/evidence/d3d11-warp.md`.
-- [ ] T009 Implement a minimal reversible WorkerW/desktop-host probe in `rust/src/bin/probe_workerw.rs` and record whether the surface stays behind desktop icons on WindowsEnv in `specs/001-rust-wallpaper-app/evidence/workerw.md`; restore original desktop state after each probe.
+- [X] T009 Implement a minimal reversible WorkerW/desktop-host probe in `rust/src/bin/probe_workerw.rs` and record whether the surface stays behind desktop icons on WindowsEnv in `specs/001-rust-wallpaper-app/evidence/workerw.md`; restore original desktop state after each probe.
 - [ ] T010 [P] Build a dedicated timing/VSync + `max_fps` probe in `rust/src/bin/probe_pacing.rs` that logs actual frame submission times on available outputs, checks 60/120/144/240Hz with caps 60/120/240 when available, and writes measured/unsupported cases to `specs/001-rust-wallpaper-app/evidence/vsync-probe.md`.
 - [X] T011 [P] Probe quick bounded one-shot system-wide CPU and GPU utilization APIs (without idle monitoring or long calibration) in `rust/src/bin/probe_usage.rs`; document available counters, time cost, CPU fallback and missing GPU cases in `specs/001-rust-wallpaper-app/evidence/load-probe.md`.
 - [X] T012 Implement a platform-independent monotonic clock, RNG, filesystem catalog and load-sampler abstraction in `rust/src/platform.rs`, injectable by deterministic tests; no new background sampling, filesystem watcher or drawing loop.
@@ -49,7 +49,9 @@
 - [X] T016 Define the single-threaded application lifecycle and serializable commands (`Start`, `Tick`, `Reload`, `Pause`, `Resume`, `Quit`, `ShellRestart`, `DisplayChanged`) in `rust/src/app_state.rs`, leaving story-specific implementations for later phases.
 - [X] T017 [P] Define deterministic test doubles (virtual clock, sample sequence, temporary folder catalog, monitor layouts and recording renderer) in `rust/tests/support/mod.rs`, shareable by all five user stories.
 - [X] T018 Wire the Win32 hidden message-window event loop and safe shutdown skeleton in `rust/src/main.rs` and `rust/src/shell.rs`, with Windows API operations on their intended threads and no system-wide registration side effects.
-- [ ] T019 Run foundational WindowsEnv WARP/WorkerW/UI probes and initial `cargo test`/`cargo clippy` verification, recording commands, outcomes and blockers in `specs/001-rust-wallpaper-app/evidence/foundation-gate.md`; stop for redesign if D3D11 desktop hosting cannot be proven.
+- [X] T019 Run foundational WindowsEnv WARP/WorkerW/UI probes and initial `cargo test`/`cargo clippy` verification, recording commands, outcomes and blockers in `specs/001-rust-wallpaper-app/evidence/foundation-gate.md`; stop for redesign if D3D11 desktop hosting cannot be proven.
+
+**Diagnostic execution closure (2026-11-04):** T009/T019 checkmarks mean the bounded desktop-host probe, native WARP/Win32 checks and actual failure/blocker report have been delivered in [evidence/t009-t019-closure-2026-11-04.md](evidence/t009-t019-closure-2026-11-04.md). **This is NOT Phase 2 acceptance:** the D3D11 desktop surface remains invisible behind icons; the Foundation Gate is **BLOCKED** and production attachment T037 may not proceed on the tested design. T006 and T010 remain independently unchecked. No Explorer-owned window was modified.
 
 **Checkpoint (blocking)**: WARP and desktop-host viability are evidenced, the Rust app builds, and deterministic interfaces exist. GPU-specific physical hardware checks remain explicitly pending rather than faked on WindowsEnv.
 

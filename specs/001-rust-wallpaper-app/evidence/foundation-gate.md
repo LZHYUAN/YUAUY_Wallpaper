@@ -1,6 +1,6 @@
 # Phase 2 Foundation Gate — Rust + Windows 11 D3D11/WorkerW
 
-**Status: BLOCKED for WindowsEnv desktop integration. T019 remains unchecked.**
+**Latest status (2026-11-04): T019 foundation-probe execution and blocker documentation COMPLETE; the Phase 2 Foundation Gate remains BLOCKED because the D3D11 surface is invisible behind icons.** Earlier sections below are historical; see [T009/T019 native closure](t009-t019-closure-2026-11-04.md). A checked diagnostic work item is not acceptance of the foundation.
 
 The following measurements distinguish *hosted Windows CI*, *Hermes Linux cross-checks*, and *target WindowsEnv 25H2*. A successful hosted CI WARP smoke is **not** evidence of WorkerW being behind Explorer desktop icons.
 

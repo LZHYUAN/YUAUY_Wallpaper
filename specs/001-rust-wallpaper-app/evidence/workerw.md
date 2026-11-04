@@ -1,6 +1,6 @@
 # T009 — WorkerW desktop-host feasibility probe
 
-**Status: PARTIAL — legacy and raised-desktop probe strategies compile and their CLI safety policies are tested. WindowsEnv behind-icon visual test remains UNVERIFIED. Do not check T009 yet.**
+**Latest status (2026-11-04): T009 probe/evidence work COMPLETE; WindowsEnv behind-icon D3D11 visual acceptance FAIL; Phase 2 Foundation Gate BLOCKED.** Earlier sections below record historical interim states; the authoritative final native-execution record is [T009/T019 closure](t009-t019-closure-2026-11-04.md). Checking the diagnostic work item does not approve the invisible desktop host.
 
 ## Implemented behavior
 
