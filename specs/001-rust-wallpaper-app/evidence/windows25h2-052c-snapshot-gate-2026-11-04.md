@@ -34,6 +34,10 @@ WindowsEnv CUA 0.37.0 互動桌面與擷取能力通過，作業系統 Build 262
 4. 僅使用自有短命 HWND 配合 D3D11 WARP／DirectComposition；同步擷取至少兩張執行中畫面，驗證圖示可見、可點擊、標記確實位於圖示後方。
 5. 銷毀自有視窗、讀回 Explorer 與桌面狀態；若出現無法復原的差異，透過已驗證的 VM checkpoint 恢復。任何先決條件缺失即 **fail closed**。
 
+## 宿主端 checkpoint 只讀驗證輔助工具
+
+另提供 `rust/scripts/verify_hyperv_checkpoint.ps1`。只能在有 Hyper-V 管理模組與授權的**宿主 PowerShell** 執行，輸入真實 VM 名稱與專用 checkpoint 名稱，讀回 VM/Checkpoint ID、建立時間與狀態；絕不執行 `Checkpoint-VM` 或 `Restore-VMSnapshot`，輸出固定 `SafeToRun052C=false`、`RestoreDemonstrated=false`，避免把「找到快照」誤判為「已證明可還原」。在 WindowsEnv guest 上使用 PowerShell `Parser.ParseInput` 進行純語法驗證，實測 `PARSER_ERRORS=0`、`NO_SCRIPT_EXECUTION=true`；**沒有在 Hyper-V 宿主真正執行該腳本**。
+
 ## 收尾與任務狀態
 
 本次沒有呼叫 `0x052C`、`SetParent`、`SetWindowLong`、`SetWindowPos` 或修改登錄／桌布。先前已驗證的 T009、T019 診斷任務仍完成；T037 與真正圖示後方動畫仍未驗收，**Phase 2 Foundation Gate 保持 BLOCKED**。原有 `.specify/`、`.agents/`、`rust/README.md`、`tasks.md` 未提交修改應保留。
