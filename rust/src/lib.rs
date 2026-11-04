@@ -5,6 +5,7 @@
 //! Spec Kit tasks. This setup scaffold performs no OS or photo operations.
 
 pub mod app_state;
+pub mod desktop_host_gate;
 pub mod diagnostics;
 pub mod error;
 pub mod monitor;

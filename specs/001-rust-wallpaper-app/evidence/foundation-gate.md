@@ -1,5 +1,7 @@
 # Phase 2 Foundation Gate — Rust + Windows 11 D3D11/WorkerW
 
+**2026-11-04 redesign update:** [25H2 DefView/shell architecture decision](windows25h2-host-redesign-decision.md) records a new read-only native `DefView` alpha inspection and a test-first Rust host-visibility gate (70 tests passing, Windows-target Clippy passing). Neither is proof of a visible underlay. The only identified potentially viable new approach involves an undocumented Explorer `0x052C` state transition that conflicts with the current no-shell-mutation rule and has an unproven rollback path; **not executed**. **The Foundation Gate is still BLOCKED**; T006/T010 and true behind-icons D3D11 acceptance remain outstanding. Existing T009/T019 checkmarks represent completed diagnostics, not product acceptance.
+
 **Latest status (2026-11-04): T019 foundation-probe execution and blocker documentation COMPLETE; the Phase 2 Foundation Gate remains BLOCKED because the D3D11 surface is invisible behind icons.** Earlier sections below are historical; see [T009/T019 native closure](t009-t019-closure-2026-11-04.md). A checked diagnostic work item is not acceptance of the foundation.
 
 The following measurements distinguish *hosted Windows CI*, *Hermes Linux cross-checks*, and *target WindowsEnv 25H2*. A successful hosted CI WARP smoke is **not** evidence of WorkerW being behind Explorer desktop icons.
